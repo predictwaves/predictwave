@@ -33,20 +33,8 @@ function BalanceCard({ fxRate }: WalletHubProps) {
         </p>
 
         {/* Balance card */}
-        <div
-          className="relative overflow-hidden rounded-2xl p-6 shadow-sm"
-          style={{ background: '#fff', border: '1px solid var(--gray-200)' }}
-        >
-          {/* Iridescent overlay */}
-          <div
-            className="pointer-events-none absolute inset-0"
-            style={{
-              background: 'linear-gradient(135deg, rgba(252,231,243,0.7) 0%, rgba(219,234,254,0.7) 50%, rgba(209,250,229,0.7) 100%)',
-              borderRadius: '1rem',
-            }}
-          />
-
-          <div className="relative">
+        <div className="card-iridescent rounded-2xl p-6">
+          <div>
             <div className="mb-1 flex items-center justify-between">
               <p
                 className="text-[11px] font-semibold uppercase tracking-widest"

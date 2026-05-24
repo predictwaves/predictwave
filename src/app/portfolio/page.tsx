@@ -19,8 +19,8 @@ export default async function PortfolioPage() {
           Your positions
         </p>
         <div
-          className="flex items-center justify-center rounded-xl border py-12"
-          style={{ borderColor: 'var(--gray-200)', borderStyle: 'dashed' }}
+          className="card-iridescent flex items-center justify-center rounded-xl py-12"
+          style={{ borderStyle: 'dashed' }}
         >
           <p className="text-sm" style={{ color: 'var(--gray-400)' }}>
             No open positions · Phase 4
@@ -37,8 +37,8 @@ export default async function PortfolioPage() {
           Recent activity
         </p>
         <div
-          className="flex items-center justify-center rounded-xl border py-12"
-          style={{ borderColor: 'var(--gray-200)', borderStyle: 'dashed' }}
+          className="card-iridescent flex items-center justify-center rounded-xl py-12"
+          style={{ borderStyle: 'dashed' }}
         >
           <p className="text-sm" style={{ color: 'var(--gray-400)' }}>
             No recent activity · Phase 4

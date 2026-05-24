@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { MarketCard } from '@/components/market-card';
 import { CategoryTabs } from '@/components/category-tabs';
+import { FeaturedCarousel } from '@/components/featured-carousel';
 import { getCachedRate } from '@/lib/fx';
 import { createSupabaseAdmin } from '@/lib/supabase/server';
 import { getMarket } from '@/lib/polymarket';
@@ -71,30 +72,7 @@ export default async function HomePage({
 
       {/* Featured carousel — only when no category filter active */}
       {featuredMarkets.length > 0 && (
-        <section className="py-5">
-          <div className="flex items-center justify-between px-7 mb-3">
-            <p
-              className="text-[11px] font-semibold uppercase tracking-widest"
-              style={{ color: 'var(--gray-400)', letterSpacing: '0.1em' }}
-            >
-              Featured
-            </p>
-          </div>
-          <div
-            className="flex gap-4 overflow-x-auto px-7 pb-3"
-            style={{ scrollSnapType: 'x mandatory', scrollbarWidth: 'none' }}
-          >
-            {featuredMarkets.map((market) => (
-              <div
-                key={market.conditionId}
-                className="shrink-0 w-[300px] sm:w-[340px]"
-                style={{ scrollSnapAlign: 'start' }}
-              >
-                <MarketCard market={market} fxRate={fxRate} featured />
-              </div>
-            ))}
-          </div>
-        </section>
+        <FeaturedCarousel markets={featuredMarkets} fxRate={fxRate} />
       )}
 
       {/* All / filtered markets grid */}

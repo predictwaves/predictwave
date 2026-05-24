@@ -36,17 +36,9 @@ export function MarketCard({ market, fxRate = 1700, featured = false }: MarketCa
   return (
     <Link
       href={`/markets/${market.conditionId}`}
-      className="group flex flex-col gap-3 rounded-xl border p-4 transition-all hover:-translate-y-0.5 hover:shadow-md"
+      className="card-iridescent group flex flex-col gap-3 rounded-xl p-4 transition-all hover:-translate-y-0.5"
       style={{
-        background: '#fff',
-        borderColor: 'var(--gray-200)',
         borderLeft: featured ? '3px solid var(--green-600)' : undefined,
-      }}
-      onMouseEnter={(e) => {
-        (e.currentTarget as HTMLAnchorElement).style.borderColor = 'var(--green-200)';
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLAnchorElement).style.borderColor = featured ? 'var(--green-600)' : 'var(--gray-200)';
       }}
     >
       {/* Tags row */}

@@ -52,9 +52,9 @@
 
 body {
   background:
-    radial-gradient(ellipse 1200px 800px at top right, rgba(252, 231, 243, 0.4) 0%, transparent 50%),
-    radial-gradient(ellipse 900px 600px at bottom left, rgba(209, 250, 229, 0.5) 0%, transparent 50%),
-    radial-gradient(ellipse 600px 400px at center, rgba(219, 234, 254, 0.3) 0%, transparent 60%),
+    radial-gradient(ellipse 1200px 800px at top right, rgba(252, 231, 243, 0.25) 0%, transparent 50%),
+    radial-gradient(ellipse 900px 600px at bottom left, rgba(209, 250, 229, 0.25) 0%, transparent 50%),
+    radial-gradient(ellipse 600px 400px at center, rgba(219, 234, 254, 0.25) 0%, transparent 60%),
     var(--gray-50);
   background-attachment: fixed;
   min-height: 100vh;
@@ -62,4 +62,24 @@ body {
   font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, sans-serif;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+}
+
+.card-iridescent {
+  background:
+    linear-gradient(
+      135deg,
+      rgba(252, 231, 243, 0.25) 0%,
+      rgba(219, 234, 254, 0.20) 35%,
+      rgba(209, 250, 229, 0.25) 70%,
+      rgba(254, 249, 195, 0.20) 100%
+    ),
+    white;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.card-iridescent:hover {
+  border-color: var(--green-200);
+  box-shadow: 0 4px 24px rgba(22, 163, 74, 0.10);
 }
