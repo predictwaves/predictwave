@@ -236,19 +236,59 @@ export function MarketDetail({ market, orderbook }: MarketDetailProps) {
                 </span>
               )}
             </div>
-            <h1 className="text-2xl font-bold leading-snug" style={{ color: 'var(--gray-900)' }}>
+            <h1 className="text-2xl leading-snug" style={{ color: 'var(--gray-900)', fontWeight: 800 }}>
               {market.question}
             </h1>
-            <div className="flex items-baseline gap-3">
-              <span className="text-3xl font-bold" style={{ color: 'var(--green-600)' }}>
-                {currency === 'NGN'
-                  ? formatNgn(usdcToNgn(yesPrice, fxRate))
-                  : formatUsdc(yesPrice)}
-              </span>
-              <span className="text-lg font-semibold" style={{ color: 'var(--gray-500)' }}>
-                YES {yesPct}%
-              </span>
-              <span className="ml-auto text-sm" style={{ color: 'var(--gray-400)' }}>
+            <div className="flex items-center gap-4 flex-wrap">
+              {/* YES price card */}
+              <div
+                className="flex flex-col gap-0.5 rounded-xl border px-5 py-3"
+                style={{ background: 'var(--green-50)', borderColor: 'var(--green-200)' }}
+              >
+                <span
+                  className="text-[10px] font-semibold uppercase tracking-widest"
+                  style={{ color: 'var(--green-700)', letterSpacing: '0.08em' }}
+                >
+                  YES
+                </span>
+                <span
+                  className="tabular-nums"
+                  style={{ fontSize: '26px', fontWeight: 800, color: 'var(--green-700)', lineHeight: 1 }}
+                >
+                  {yesPct}%
+                </span>
+                <span className="text-xs tabular-nums" style={{ color: 'var(--green-600)' }}>
+                  {currency === 'NGN'
+                    ? formatNgn(usdcToNgn(yesPrice, fxRate))
+                    : formatUsdc(yesPrice)}{' '}
+                  / share
+                </span>
+              </div>
+              {/* NO price card */}
+              <div
+                className="flex flex-col gap-0.5 rounded-xl border px-5 py-3"
+                style={{ background: 'var(--red-50)', borderColor: 'var(--gray-200)' }}
+              >
+                <span
+                  className="text-[10px] font-semibold uppercase tracking-widest"
+                  style={{ color: 'var(--red-700)', letterSpacing: '0.08em' }}
+                >
+                  NO
+                </span>
+                <span
+                  className="tabular-nums"
+                  style={{ fontSize: '26px', fontWeight: 800, color: 'var(--red-600)', lineHeight: 1 }}
+                >
+                  {100 - yesPct}%
+                </span>
+                <span className="text-xs" style={{ color: 'var(--red-600)' }}>
+                  {currency === 'NGN'
+                    ? formatNgn(usdcToNgn(1 - yesPrice, fxRate))
+                    : formatUsdc(1 - yesPrice)}{' '}
+                  / share
+                </span>
+              </div>
+              <span className="text-sm ml-auto" style={{ color: 'var(--gray-400)' }}>
                 Total vol: {totalVolumeLabel}
               </span>
             </div>

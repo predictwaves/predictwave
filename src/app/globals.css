@@ -51,7 +51,13 @@
 }
 
 body {
-  background: var(--gray-50);
+  background:
+    radial-gradient(ellipse 1200px 800px at top right, rgba(252, 231, 243, 0.4) 0%, transparent 50%),
+    radial-gradient(ellipse 900px 600px at bottom left, rgba(209, 250, 229, 0.5) 0%, transparent 50%),
+    radial-gradient(ellipse 600px 400px at center, rgba(219, 234, 254, 0.3) 0%, transparent 60%),
+    var(--gray-50);
+  background-attachment: fixed;
+  min-height: 100vh;
   color: var(--gray-900);
   font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, sans-serif;
   line-height: 1.5;

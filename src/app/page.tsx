@@ -1,6 +1,6 @@
-import Link from 'next/link';
+import { Suspense } from 'react';
 import { MarketCard } from '@/components/market-card';
-import { WalletHub } from '@/components/wallet-hub';
+import { CategoryTabs } from '@/components/category-tabs';
 import { getCachedRate } from '@/lib/fx';
 import { createSupabaseAdmin } from '@/lib/supabase/server';
 import { getMarket } from '@/lib/polymarket';
@@ -25,100 +25,115 @@ async function getFeaturedMarkets(): Promise<MarketMeta[]> {
   }
 }
 
-const HOW_IT_WORKS = [
-  {
-    step: '1',
-    title: 'Connect',
-    description: 'Sign up with your email or Google. A Polygon wallet is created for you automatically.',
-  },
-  {
-    step: '2',
-    title: 'Fund your wallet',
-    description: 'Buy USDC via Yellow Card, Fonbnk, Bybit, or Luno and send to your wallet address.',
-    href: '/fund',
-  },
-  {
-    step: '3',
-    title: 'Trade',
-    description: 'Browse curated Polymarket markets displayed in Naira and buy YES or NO shares.',
-    href: '/markets',
-  },
-];
+async function getMarkets(category?: string): Promise<MarketMeta[]> {
+  try {
+    const supabase = createSupabaseAdmin();
+    let query = supabase
+      .from('curated_markets')
+      .select('condition_id')
+      .eq('hidden', false)
+      .order('featured_rank', { ascending: true, nullsFirst: false })
+      .order('created_at', { ascending: false })
+      .limit(50);
+    if (category) query = query.eq('category', category);
+    const { data } = await query;
+    if (!data?.length) return [];
+    const markets = await Promise.all(data.map((r) => getMarket(r.condition_id as string)));
+    return markets.filter((m): m is MarketMeta => m !== null);
+  } catch {
+    return [];
+  }
+}
 
-export default async function HomePage() {
-  const [featuredMarkets, fxData] = await Promise.all([
-    getFeaturedMarkets(),
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
+  const category = typeof sp.category === 'string' ? sp.category : undefined;
+
+  const [featuredMarkets, allMarkets, fxData] = await Promise.all([
+    category ? Promise.resolve([]) : getFeaturedMarkets(),
+    getMarkets(category),
     getCachedRate('NGN/USD').catch(() => null),
   ]);
   const fxRate = fxData?.rate ?? 1700;
 
   return (
     <>
-      {/* WalletHub: shows balance card when logged in, hero when logged out */}
-      <WalletHub fxRate={fxRate} />
+      {/* Category chips */}
+      <div className="px-7 pt-5 pb-4 border-b" style={{ borderColor: 'var(--gray-100)' }}>
+        <Suspense fallback={<div className="h-8 animate-pulse rounded-full bg-gray-100 w-64" />}>
+          <CategoryTabs />
+        </Suspense>
+      </div>
 
-      {/* Featured markets */}
+      {/* Featured carousel — only when no category filter active */}
       {featuredMarkets.length > 0 && (
-        <section className="mx-auto max-w-6xl px-4 py-10">
-          <div className="mb-5 flex items-center justify-between">
-            <h2 className="text-lg font-bold" style={{ color: 'var(--gray-900)' }}>
-              Featured markets
-            </h2>
-            <Link href="/markets" className="text-sm font-medium" style={{ color: 'var(--green-600)' }}>
-              View all →
-            </Link>
+        <section className="py-5">
+          <div className="flex items-center justify-between px-7 mb-3">
+            <p
+              className="text-[11px] font-semibold uppercase tracking-widest"
+              style={{ color: 'var(--gray-400)', letterSpacing: '0.1em' }}
+            >
+              Featured
+            </p>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div
+            className="flex gap-4 overflow-x-auto px-7 pb-3"
+            style={{ scrollSnapType: 'x mandatory', scrollbarWidth: 'none' }}
+          >
             {featuredMarkets.map((market) => (
-              <MarketCard key={market.conditionId} market={market} fxRate={fxRate} />
+              <div
+                key={market.conditionId}
+                className="shrink-0 w-[300px] sm:w-[340px]"
+                style={{ scrollSnapAlign: 'start' }}
+              >
+                <MarketCard market={market} fxRate={fxRate} featured />
+              </div>
             ))}
           </div>
         </section>
       )}
 
-      {/* How it works — always visible */}
-      <section className="px-4 py-14" style={{ background: '#fff' }}>
-        <div className="mx-auto max-w-4xl">
-          <h2 className="mb-10 text-center text-lg font-bold" style={{ color: 'var(--gray-900)' }}>
-            How it works
-          </h2>
-          <div className="grid gap-8 sm:grid-cols-3">
-            {HOW_IT_WORKS.map((s) => (
-              <div key={s.step} className="flex flex-col gap-3">
-                <div
-                  className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white"
-                  style={{ background: 'var(--green-600)' }}
-                >
-                  {s.step}
-                </div>
-                <h3 className="font-semibold" style={{ color: 'var(--gray-900)' }}>
-                  {s.title}
-                </h3>
-                <p className="text-sm leading-relaxed" style={{ color: 'var(--gray-600)' }}>
-                  {s.description}
-                </p>
-                {s.href && (
-                  <Link href={s.href} className="text-sm font-medium" style={{ color: 'var(--green-600)' }}>
-                    Get started →
-                  </Link>
-                )}
-              </div>
+      {/* All / filtered markets grid */}
+      <section className="px-7 py-6">
+        <div className="flex items-center justify-between mb-5">
+          <p
+            className="text-[11px] font-semibold uppercase tracking-widest"
+            style={{ color: 'var(--gray-400)', letterSpacing: '0.1em' }}
+          >
+            {category ? `${category} markets` : 'Trending in Nigeria'}
+          </p>
+        </div>
+
+        {allMarkets.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 py-16 text-center">
+            <p className="text-base font-medium" style={{ color: 'var(--gray-400)' }}>
+              No markets found{category ? ` in "${category}"` : ''}.
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {allMarkets.map((market) => (
+              <MarketCard key={market.conditionId} market={market} fxRate={fxRate} />
             ))}
           </div>
-        </div>
+        )}
       </section>
 
       {/* Footer */}
       <footer
-        className="border-t px-4 py-8 text-center text-xs"
-        style={{ borderColor: 'var(--gray-200)', color: 'var(--gray-400)' }}
+        className="border-t px-7 py-8 text-center text-xs"
+        style={{ borderColor: 'var(--gray-100)', color: 'var(--gray-400)' }}
       >
         <p>
           PredictWaves · Powered by{' '}
           <a href="https://polygon.technology" className="underline" target="_blank" rel="noopener noreferrer">
             Polygon
-          </a>{' '}
-          ·{' '}
+          </a>
+          {' '}·{' '}
           <a href="https://polymarket.com" className="underline" target="_blank" rel="noopener noreferrer">
             Polymarket
           </a>

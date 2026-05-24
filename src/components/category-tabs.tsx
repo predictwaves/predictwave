@@ -1,5 +1,5 @@
 'use client';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 const TABS = [
   { label: 'All', value: '' },
@@ -12,8 +12,12 @@ const TABS = [
 
 export function CategoryTabs() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const current = searchParams.get('category') ?? '';
+
+  // Push to whichever page the tabs are rendered on (/ or /markets)
+  const base = pathname === '/' ? '/' : '/markets';
 
   function setCategory(value: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -22,11 +26,12 @@ export function CategoryTabs() {
     } else {
       params.delete('category');
     }
-    router.push(`/markets?${params.toString()}`);
+    const qs = params.toString();
+    router.push(qs ? `${base}?${qs}` : base);
   }
 
   return (
-    <div className="flex gap-1 overflow-x-auto pb-1">
+    <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
       {TABS.map((tab) => {
         const active = tab.value === current;
         return (
@@ -34,7 +39,7 @@ export function CategoryTabs() {
             key={tab.value}
             type="button"
             onClick={() => setCategory(tab.value)}
-            className="shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors"
+            className="shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors"
             style={
               active
                 ? { background: 'var(--green-600)', color: '#fff' }

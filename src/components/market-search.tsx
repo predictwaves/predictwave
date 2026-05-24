@@ -1,7 +1,7 @@
 'use client';
 import { Command, CommandDialog, CommandEmpty, CommandInput, CommandItem, CommandList } from 'cmdk';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface SearchResult {
   conditionId: string;
@@ -9,17 +9,29 @@ interface SearchResult {
   category: string | null;
 }
 
-export function MarketSearch() {
-  const [open, setOpen] = useState(false);
+interface MarketSearchProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+export function MarketSearch({ open: controlledOpen, onOpenChange }: MarketSearchProps = {}) {
+  const [localOpen, setLocalOpen] = useState(false);
+  const open = controlledOpen ?? localOpen;
+  const handleOpenChange = onOpenChange ?? setLocalOpen;
+
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const router = useRouter();
+
+  // Stable ref so the Cmd+K effect never needs to re-register
+  const handleOpenRef = useRef(handleOpenChange);
+  handleOpenRef.current = handleOpenChange;
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
-        setOpen((o) => !o);
+        handleOpenRef.current(true);
       }
     }
     document.addEventListener('keydown', handleKey);
@@ -40,14 +52,14 @@ export function MarketSearch() {
   }, [query]);
 
   function select(conditionId: string) {
-    setOpen(false);
+    handleOpenChange(false);
     setQuery('');
     setResults([]);
     router.push(`/markets/${conditionId}`);
   }
 
   return (
-    <CommandDialog open={open} onOpenChange={setOpen}>
+    <CommandDialog open={open} onOpenChange={handleOpenChange}>
       <Command className="rounded-xl border shadow-lg" style={{ background: '#fff', borderColor: 'var(--gray-200)' }}>
         <CommandInput
           placeholder="Search markets…"

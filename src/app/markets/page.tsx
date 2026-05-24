@@ -1,7 +1,6 @@
 import { Suspense } from 'react';
 import { MarketCard } from '@/components/market-card';
 import { CategoryTabs } from '@/components/category-tabs';
-import { MarketSearch } from '@/components/market-search';
 import { PriceToggle } from '@/components/price-display';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getCachedRate } from '@/lib/fx';
@@ -83,30 +82,15 @@ export default async function MarketsPage({
   const fxRate = fxData?.rate ?? 1700;
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-8">
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold" style={{ color: 'var(--gray-900)' }}>
-          Markets
+    <main className="px-7 py-8">
+      <div className="mb-5 flex items-center justify-between">
+        <h1 className="text-xl font-bold" style={{ color: 'var(--gray-900)' }}>
+          All markets
         </h1>
-        <div className="flex items-center gap-2">
-          <PriceToggle />
-          <button
-            type="button"
-            onClick={() => {}}
-            className="hidden items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm sm:flex"
-            style={{ borderColor: 'var(--gray-200)', color: 'var(--gray-500)' }}
-            aria-label="Search markets — press ⌘K"
-          >
-            <svg aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            Search
-            <kbd className="ml-1 rounded px-1 text-[10px]" style={{ background: 'var(--gray-100)' }}>⌘K</kbd>
-          </button>
-        </div>
+        <PriceToggle />
       </div>
 
-      <Suspense fallback={<div className="mb-4 h-9 animate-pulse rounded-full bg-gray-100" />}>
+      <Suspense fallback={<div className="mb-4 h-8 animate-pulse rounded-full bg-gray-100 w-64" />}>
         <div className="mb-6">
           <CategoryTabs />
         </div>
@@ -115,8 +99,6 @@ export default async function MarketsPage({
       <Suspense fallback={<MarketGridSkeleton />}>
         <MarketsList category={category} fxRate={fxRate} />
       </Suspense>
-
-      <MarketSearch />
     </main>
   );
 }

@@ -18,26 +18,15 @@ function daysUntil(isoDate: string): string {
 interface MarketCardProps {
   market: MarketMeta;
   fxRate?: number;
+  featured?: boolean;
 }
 
-const CATEGORY_COLORS: Record<string, string> = {
-  politics: 'var(--amber-700)',
-  sports: 'var(--green-700)',
-  crypto: '#7c3aed',
-  nigeria: 'var(--green-600)',
-  world: 'var(--gray-500)',
-  other: 'var(--gray-400)',
-};
-
-export function MarketCard({ market, fxRate = 1700 }: MarketCardProps) {
+export function MarketCard({ market, fxRate = 1700, featured = false }: MarketCardProps) {
   const { displayCurrency: currency } = useCurrencyStore();
   const yesPrice = market.outcomes[0]?.price ?? 0;
+  const noPrice = market.outcomes[1]?.price ?? (1 - yesPrice);
   const yesPct = Math.round(yesPrice * 100);
-
-  const priceLabel =
-    currency === 'NGN'
-      ? formatNgn(usdcToNgn(yesPrice, fxRate))
-      : formatUsdc(yesPrice);
+  const noPct = Math.round(noPrice * 100);
 
   const volumeLabel =
     currency === 'NGN'
@@ -51,49 +40,63 @@ export function MarketCard({ market, fxRate = 1700 }: MarketCardProps) {
       style={{
         background: '#fff',
         borderColor: 'var(--gray-200)',
+        borderLeft: featured ? '3px solid var(--green-600)' : undefined,
       }}
       onMouseEnter={(e) => {
         (e.currentTarget as HTMLAnchorElement).style.borderColor = 'var(--green-200)';
       }}
       onMouseLeave={(e) => {
-        (e.currentTarget as HTMLAnchorElement).style.borderColor = 'var(--gray-200)';
+        (e.currentTarget as HTMLAnchorElement).style.borderColor = featured ? 'var(--green-600)' : 'var(--gray-200)';
       }}
     >
-      {/* Category badge */}
-      {market.category && (
+      {/* Tags row */}
+      <div className="flex items-center gap-1.5 flex-wrap">
+        {market.category && (
+          <span
+            className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+            style={{ background: 'var(--gray-100)', color: 'var(--gray-500)' }}
+          >
+            {market.category}
+          </span>
+        )}
         <span
-          className="self-start rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
-          style={{
-            background: 'var(--gray-100)',
-            color: CATEGORY_COLORS[market.category] ?? 'var(--gray-500)',
-          }}
+          className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
+          style={{ background: 'var(--green-50)', color: 'var(--green-700)' }}
         >
-          {market.category}
+          Polymarket
         </span>
-      )}
+      </div>
 
       {/* Question */}
       <p
-        className="line-clamp-2 text-sm font-medium leading-snug"
-        style={{ color: 'var(--gray-900)' }}
+        className="line-clamp-2 text-sm leading-snug"
+        style={{ color: 'var(--gray-900)', fontWeight: 600 }}
       >
         {market.question}
       </p>
 
-      {/* YES price */}
-      <div className="flex items-baseline gap-2">
-        <span className="text-xl font-bold" style={{ color: 'var(--green-600)' }}>
-          {priceLabel}
-        </span>
-        <span className="text-sm font-semibold" style={{ color: 'var(--gray-500)' }}>
-          YES {yesPct}%
-        </span>
-      </div>
+      {/* Volume */}
+      <p className="text-xs" style={{ color: 'var(--gray-400)' }}>
+        {volumeLabel}
+        {market.endDate && <> · {daysUntil(market.endDate)}</>}
+      </p>
 
-      {/* Footer */}
-      <div className="flex items-center justify-between text-xs" style={{ color: 'var(--gray-400)' }}>
-        <span>{volumeLabel}</span>
-        {market.endDate && <span>{daysUntil(market.endDate)}</span>}
+      {/* YES / NO mini buttons */}
+      <div className="flex items-center gap-2 mt-auto">
+        <div
+          className="flex flex-col items-center gap-0.5 rounded-lg border px-3 py-1.5"
+          style={{ background: 'var(--green-50)', borderColor: 'var(--green-200)' }}
+        >
+          <span className="text-[10px] font-semibold uppercase" style={{ color: 'var(--gray-500)' }}>YES</span>
+          <span className="text-[13px] font-bold tabular-nums" style={{ color: 'var(--green-700)' }}>{yesPct}%</span>
+        </div>
+        <div
+          className="flex flex-col items-center gap-0.5 rounded-lg border px-3 py-1.5"
+          style={{ background: 'var(--red-50)', borderColor: 'var(--gray-200)' }}
+        >
+          <span className="text-[10px] font-semibold uppercase" style={{ color: 'var(--gray-500)' }}>NO</span>
+          <span className="text-[13px] font-bold tabular-nums" style={{ color: 'var(--red-600)' }}>{noPct}%</span>
+        </div>
       </div>
     </Link>
   );
