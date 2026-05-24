@@ -9,7 +9,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { useCurrency } from '@/lib/currency-context';
+import { useCurrencyStore } from '@/lib/currency-store';
 import { formatNgn, formatUsdc, usdcToNgn } from '@/lib/ngn';
 import type { MarketMeta } from '@/lib/polymarket';
 import { useFxRate } from '@/hooks/use-fx-rate';
@@ -55,7 +55,7 @@ interface PriceChartProps {
 function PriceChart({ conditionId, fxRate }: PriceChartProps) {
   const [interval, setInterval] = useState<HistoryInterval>('1d');
   const { data, isLoading } = usePriceHistory(conditionId, interval);
-  const { currency } = useCurrency();
+  const { displayCurrency: currency } = useCurrencyStore();
 
   const chartData = (data?.history ?? []).map((pt) => ({
     t: pt.t,
@@ -199,7 +199,7 @@ interface MarketDetailProps {
 }
 
 export function MarketDetail({ market, orderbook }: MarketDetailProps) {
-  const { currency } = useCurrency();
+  const { displayCurrency: currency } = useCurrencyStore();
   const { data: fx } = useFxRate();
   const fxRate = fx?.rate ?? 1700;
   const [descOpen, setDescOpen] = useState(false);

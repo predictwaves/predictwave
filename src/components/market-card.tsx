@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { useCurrency } from '@/lib/currency-context';
+import { useCurrencyStore } from '@/lib/currency-store';
 import { formatNgn, formatUsdc, usdcToNgn } from '@/lib/ngn';
 import type { MarketMeta } from '@/lib/polymarket';
 
@@ -30,7 +30,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 export function MarketCard({ market, fxRate = 1700 }: MarketCardProps) {
-  const { currency } = useCurrency();
+  const { displayCurrency: currency } = useCurrencyStore();
   const yesPrice = market.outcomes[0]?.price ?? 0;
   const yesPct = Math.round(yesPrice * 100);
 
