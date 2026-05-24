@@ -13,8 +13,8 @@ const numericString = (def: number) =>
 
 const serverSchema = z.object({
   // Privy
-  PRIVY_APP_SECRET: z.string().min(1),
-  PRIVY_WEBHOOK_SECRET: z.string().min(1),
+  PRIVY_APP_SECRET: z.string().min(50),
+  PRIVY_WEBHOOK_SECRET: z.string().optional(),
 
   // Alchemy
   ALCHEMY_API_KEY: z.string().min(1),
@@ -46,7 +46,7 @@ const clientSchema = z.object({
   NEXT_PUBLIC_APP_URL: z.string().url().default('http://localhost:3000'),
 
   // Privy
-  NEXT_PUBLIC_PRIVY_APP_ID: z.string().min(1),
+  NEXT_PUBLIC_PRIVY_APP_ID: z.string().min(20),
 
   // Polygon
   NEXT_PUBLIC_POLYGON_RPC: z.string().url(),
@@ -68,7 +68,7 @@ const clientSchema = z.object({
   NEXT_PUBLIC_SUPPORT_EMAIL: z.string().email().default('support@predictwaves.com'),
 });
 
-function parseEnv<T extends z.ZodTypeAny>(schema: T, source: NodeJS.ProcessEnv): z.infer<T> {
+function parseEnv<T extends z.ZodTypeAny>(schema: T, source: Record<string, string | undefined>): z.infer<T> {
   const result = schema.safeParse(source);
   if (!result.success) {
     const errors = result.error.flatten().fieldErrors;
@@ -82,8 +82,28 @@ function parseEnv<T extends z.ZodTypeAny>(schema: T, source: NodeJS.ProcessEnv):
 
 const isServer = typeof window === 'undefined';
 
-export const clientEnv = parseEnv(clientSchema, process.env);
+// Explicitly reference each NEXT_PUBLIC_* var so Turbopack can statically inline them.
+// Passing `process.env` as a whole object does not work in Turbopack — only direct
+// property accesses like `process.env.NEXT_PUBLIC_FOO` are statically replaced.
+const clientRuntimeEnv: Record<string, string | undefined> = {
+  NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+  NEXT_PUBLIC_PRIVY_APP_ID: process.env.NEXT_PUBLIC_PRIVY_APP_ID,
+  NEXT_PUBLIC_POLYGON_RPC: process.env.NEXT_PUBLIC_POLYGON_RPC,
+  NEXT_PUBLIC_POLYMARKET_CHAIN_ID: process.env.NEXT_PUBLIC_POLYMARKET_CHAIN_ID,
+  NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  NEXT_PUBLIC_POSTHOG_KEY: process.env.NEXT_PUBLIC_POSTHOG_KEY,
+  NEXT_PUBLIC_POSTHOG_HOST: process.env.NEXT_PUBLIC_POSTHOG_HOST,
+  NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
+  NEXT_PUBLIC_WHATSAPP_NUMBER: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER,
+  NEXT_PUBLIC_SUPPORT_EMAIL: process.env.NEXT_PUBLIC_SUPPORT_EMAIL,
+};
+
+export const clientEnv = parseEnv(clientSchema, clientRuntimeEnv);
 
 export const serverEnv = isServer
   ? parseEnv(serverSchema, process.env)
   : ({} as z.infer<typeof serverSchema>);
+
+// Unified env object — client vars available everywhere; server vars only on server.
+export const env = clientEnv;

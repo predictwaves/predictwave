@@ -1,4 +1,11 @@
+'use client';
+import Link from 'next/link';
+import { usePrivy } from '@privy-io/react-auth';
+import { ConnectButton } from '@/components/connect-button';
+
 export default function HomePage() {
+  const { authenticated } = usePrivy();
+
   return (
     <main className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
       <div className="flex flex-col items-center gap-6 text-center px-4">
@@ -18,16 +25,17 @@ export default function HomePage() {
           Polymarket markets in Naira.
         </p>
 
-        <span
-          className="px-4 py-1.5 rounded-full text-sm font-semibold"
-          style={{
-            background: 'var(--green-50)',
-            color: 'var(--green-700)',
-            border: '1px solid var(--green-200)',
-          }}
-        >
-          Coming soon
-        </span>
+        <ConnectButton />
+
+        {authenticated && (
+          <Link
+            href="/account"
+            className="text-sm font-medium"
+            style={{ color: 'var(--green-600)' }}
+          >
+            Go to your account →
+          </Link>
+        )}
       </div>
     </main>
   );
