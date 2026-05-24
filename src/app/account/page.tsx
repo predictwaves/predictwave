@@ -4,10 +4,41 @@ import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ConnectButton } from '@/components/connect-button';
 import { WalletBalance } from '@/components/wallet-balance';
+import { useFxRate } from '@/hooks/use-fx-rate';
+import { useCuratedMarkets } from '@/hooks/use-curated-markets';
 
 function truncateMiddle(s: string, start = 8, end = 6): string {
   if (s.length <= start + end) return s;
   return `${s.slice(0, start)}…${s.slice(-end)}`;
+}
+
+function Phase2DebugPanel() {
+  const { data: fx, isLoading: fxLoading } = useFxRate();
+  const { data: markets, isLoading: marketsLoading } = useCuratedMarkets();
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm font-medium" style={{ color: 'var(--gray-500)' }}>
+          Phase 2 debug — remove in Phase 3
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-2 text-xs font-mono" style={{ color: 'var(--gray-600)' }}>
+        <div>
+          FX rate:{' '}
+          {fxLoading
+            ? 'loading…'
+            : fx
+              ? `₦${fx.rate.toLocaleString()} (${fx.source}${fx.stale ? ', stale' : ''})`
+              : 'error'}
+        </div>
+        <div>
+          Curated markets:{' '}
+          {marketsLoading ? 'loading…' : markets ? `${markets.markets.length} rows` : 'error'}
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function AccountPage() {
@@ -71,6 +102,8 @@ export default function AccountPage() {
           <WalletBalance />
         </CardContent>
       </Card>
+
+      <Phase2DebugPanel />
 
       <p className="text-xs text-center" style={{ color: 'var(--gray-400)' }}>
         Powered by Polygon. Stablecoin: USDC (bridged).
