@@ -21,9 +21,9 @@ const serverSchema = z.object({
 
   // Polymarket
   POLYMARKET_API_HOST: z.string().url().default('https://clob.polymarket.com'),
-  POLYMARKET_API_KEY: z.string().optional(),
-  POLYMARKET_API_SECRET: z.string().optional(),
-  POLYMARKET_API_PASSPHRASE: z.string().optional(),
+  POLYMARKET_API_KEY: z.string().min(1),
+  POLYMARKET_API_SECRET: z.string().min(1),
+  POLYMARKET_API_PASSPHRASE: z.string().min(1),
 
   // Supabase (service role — server only)
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
