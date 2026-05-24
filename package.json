@@ -48,6 +48,8 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.0.2",
+    "@vitest/browser": "^4.1.7",
+    "happy-dom": "^20.9.0",
     "jsdom": "^29.1.1",
     "supabase": "^2.101.0",
     "tailwindcss": "^4",

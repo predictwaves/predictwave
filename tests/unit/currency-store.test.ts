@@ -1,9 +1,16 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+// @vitest-environment jsdom
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+// Bypass persist middleware so tests run without localStorage (unit tests should not depend on storage)
+vi.mock('zustand/middleware', () => ({
+  persist: (fn: unknown) => fn,
+  createJSONStorage: () => null,
+}));
+
 import { useCurrencyStore } from '@/lib/currency-store';
 
 describe('useCurrencyStore', () => {
   beforeEach(() => {
-    localStorage.clear();
     useCurrencyStore.setState({ displayCurrency: 'NGN', balanceVisible: true });
   });
 

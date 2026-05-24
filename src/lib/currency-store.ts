@@ -22,20 +22,10 @@ export const useCurrencyStore = create<CurrencyStore>()(
         set({ balanceVisible: !get().balanceVisible }),
     }),
     {
-      name: 'pw_currency',
-      storage: createJSONStorage(() => {
-        if (typeof window === 'undefined') {
-          return {
-            getItem: () => null,
-            setItem: () => {},
-            removeItem: () => {},
-            clear: () => {},
-            key: () => null,
-            length: 0,
-          } as unknown as Storage;
-        }
-        return localStorage;
-      }),
+      name: 'pw-currency',
+      storage: createJSONStorage(() =>
+        typeof window !== 'undefined' ? window.localStorage : undefined as unknown as Storage,
+      ),
     },
   ),
 );
