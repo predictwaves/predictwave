@@ -7,10 +7,8 @@ export default async function PortfolioPage() {
 
   return (
     <>
-      {/* Balance card */}
       <WalletHub fxRate={fxRate} />
 
-      {/* Positions placeholder */}
       <section className="px-7 pb-8">
         <p
           className="mb-4 text-[11px] font-semibold uppercase tracking-widest"
@@ -19,8 +17,8 @@ export default async function PortfolioPage() {
           Your positions
         </p>
         <div
-          className="card-iridescent flex items-center justify-center rounded-xl py-12"
-          style={{ borderStyle: 'dashed' }}
+          className="flex items-center justify-center rounded-xl border py-12"
+          style={{ borderColor: 'var(--gray-200)', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
         >
           <p className="text-sm" style={{ color: 'var(--gray-400)' }}>
             No open positions · Phase 4
@@ -28,7 +26,6 @@ export default async function PortfolioPage() {
         </div>
       </section>
 
-      {/* Activity placeholder */}
       <section className="px-7 pb-10">
         <p
           className="mb-4 text-[11px] font-semibold uppercase tracking-widest"
@@ -37,8 +34,8 @@ export default async function PortfolioPage() {
           Recent activity
         </p>
         <div
-          className="card-iridescent flex items-center justify-center rounded-xl py-12"
-          style={{ borderStyle: 'dashed' }}
+          className="flex items-center justify-center rounded-xl border py-12"
+          style={{ borderColor: 'var(--gray-200)', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
         >
           <p className="text-sm" style={{ color: 'var(--gray-400)' }}>
             No recent activity · Phase 4

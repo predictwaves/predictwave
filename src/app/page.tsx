@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import { MarketCard } from '@/components/market-card';
 import { CategoryTabs } from '@/components/category-tabs';
-import { FeaturedCarousel } from '@/components/featured-carousel';
+import { FeaturedBillboard } from '@/components/featured-billboard';
 import { getCachedRate } from '@/lib/fx';
 import { createSupabaseAdmin } from '@/lib/supabase/server';
 import { getMarket } from '@/lib/polymarket';
@@ -70,9 +70,9 @@ export default async function HomePage({
         </Suspense>
       </div>
 
-      {/* Featured carousel — only when no category filter active */}
+      {/* Featured billboard — only when no category filter active */}
       {featuredMarkets.length > 0 && (
-        <FeaturedCarousel markets={featuredMarkets} fxRate={fxRate} />
+        <FeaturedBillboard markets={featuredMarkets} fxRate={fxRate} />
       )}
 
       {/* All / filtered markets grid */}

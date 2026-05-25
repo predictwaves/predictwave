@@ -11,17 +11,15 @@ function daysUntil(isoDate: string): string {
   if (days === 0) return 'ends today';
   if (days === 1) return 'ends tomorrow';
   if (days < 30) return `ends in ${days}d`;
-  const months = Math.floor(days / 30);
-  return `ends in ${months}mo`;
+  return `ends in ${Math.floor(days / 30)}mo`;
 }
 
 interface MarketCardProps {
   market: MarketMeta;
   fxRate?: number;
-  featured?: boolean;
 }
 
-export function MarketCard({ market, fxRate = 1700, featured = false }: MarketCardProps) {
+export function MarketCard({ market, fxRate = 1700 }: MarketCardProps) {
   const { displayCurrency: currency } = useCurrencyStore();
   const yesPrice = market.outcomes[0]?.price ?? 0;
   const noPrice = market.outcomes[1]?.price ?? (1 - yesPrice);
@@ -36,12 +34,20 @@ export function MarketCard({ market, fxRate = 1700, featured = false }: MarketCa
   return (
     <Link
       href={`/markets/${market.conditionId}`}
-      className="card-iridescent group flex flex-col gap-3 rounded-xl p-4 transition-all hover:-translate-y-0.5"
-      style={{
-        borderLeft: featured ? '3px solid var(--green-600)' : undefined,
+      className="group flex flex-col gap-3 rounded-xl border p-4 transition-all hover:-translate-y-0.5"
+      style={{ background: '#fff', borderColor: 'var(--gray-200)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
+      onMouseEnter={(e) => {
+        const el = e.currentTarget as HTMLAnchorElement;
+        el.style.borderColor = 'var(--green-200)';
+        el.style.boxShadow = '0 4px 16px rgba(22,163,74,0.08)';
+      }}
+      onMouseLeave={(e) => {
+        const el = e.currentTarget as HTMLAnchorElement;
+        el.style.borderColor = 'var(--gray-200)';
+        el.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)';
       }}
     >
-      {/* Tags row */}
+      {/* Tags */}
       <div className="flex items-center gap-1.5 flex-wrap">
         {market.category && (
           <span
@@ -67,7 +73,7 @@ export function MarketCard({ market, fxRate = 1700, featured = false }: MarketCa
         {market.question}
       </p>
 
-      {/* Volume */}
+      {/* Volume + expiry */}
       <p className="text-xs" style={{ color: 'var(--gray-400)' }}>
         {volumeLabel}
         {market.endDate && <> · {daysUntil(market.endDate)}</>}

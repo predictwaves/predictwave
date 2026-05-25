@@ -16,7 +16,6 @@ export function CategoryTabs() {
   const searchParams = useSearchParams();
   const current = searchParams.get('category') ?? '';
 
-  // Push to whichever page the tabs are rendered on (/ or /markets)
   const base = pathname === '/' ? '/' : '/markets';
 
   function setCategory(value: string) {
@@ -39,11 +38,11 @@ export function CategoryTabs() {
             key={tab.value}
             type="button"
             onClick={() => setCategory(tab.value)}
-            className="shrink-0 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors"
+            className="shrink-0 rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors"
             style={
               active
-                ? { background: 'var(--green-600)', color: '#fff' }
-                : { background: 'var(--gray-100)', color: 'var(--gray-600)' }
+                ? { background: 'var(--green-600)', color: '#fff', borderColor: 'var(--green-600)' }
+                : { background: '#fff', color: 'var(--gray-600)', borderColor: 'var(--gray-200)' }
             }
           >
             {tab.label}
