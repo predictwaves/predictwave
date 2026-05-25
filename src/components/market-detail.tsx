@@ -15,6 +15,7 @@ import type { MarketMeta } from '@/lib/polymarket';
 import { useFxRate } from '@/hooks/use-fx-rate';
 import type { HistoryInterval } from '@/hooks/use-price-history';
 import { usePriceHistory } from '@/hooks/use-price-history';
+import { OrderPanel } from '@/components/order-panel';
 import type { OrderBookSummary } from '@polymarket/clob-client';
 
 const INTERVALS: { label: string; value: HistoryInterval }[] = [
@@ -345,17 +346,9 @@ export function MarketDetail({ market, orderbook }: MarketDetailProps) {
           )}
         </div>
 
-        {/* Side column: order panel placeholder */}
-        <div
-          className="w-full rounded-xl border p-6 lg:w-72 lg:shrink-0"
-          style={{ background: 'var(--gray-50)', borderColor: 'var(--gray-200)', borderStyle: 'dashed' }}
-        >
-          <p className="text-center text-sm font-medium" style={{ color: 'var(--gray-400)' }}>
-            Order panel — Phase 4
-          </p>
-          <p className="mt-2 text-center text-xs" style={{ color: 'var(--gray-300)' }}>
-            Buy/sell YES or NO shares here.
-          </p>
+        {/* Side column: order panel */}
+        <div className="w-full lg:w-80 lg:shrink-0">
+          <OrderPanel market={market} fxRate={fxRate} />
         </div>
       </div>
     </div>

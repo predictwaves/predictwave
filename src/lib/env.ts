@@ -24,6 +24,12 @@ const serverSchema = z.object({
   POLYMARKET_API_KEY: z.string().min(1),
   POLYMARKET_API_SECRET: z.string().min(1),
   POLYMARKET_API_PASSPHRASE: z.string().min(1),
+  // Address that owns the CLOB API creds — used as POLY_ADDRESS when signing L2
+  // headers on order submission. The signature itself is an HMAC of the secret;
+  // no private key is needed here.
+  POLYMARKET_API_ADDRESS: z.string().optional(),
+  // Builder code for Polymarket's builder/operator fee-attribution program.
+  POLYMARKET_BUILDER_CODE: z.string().optional(),
 
   // Supabase (service role — server only)
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
