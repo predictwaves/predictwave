@@ -1,34 +1,46 @@
 import { expect, test } from '@playwright/test';
 
-test('landing page loads with topbar and brand name', async ({ page }) => {
-  await page.goto('/');
-  await expect(page.getByText('predictwaves').first()).toBeVisible();
-});
+// Homepage renders live Polymarket market cards; run serially so these don't
+// compete for the single dev server, and wait for the network to settle first.
+test.describe.serial('landing (Polymarket-live)', () => {
+  test.describe.configure({ timeout: 30_000 });
 
-test('landing page shows connect button for logged-out users', async ({ page }) => {
-  await page.goto('/');
-  await expect(page.getByRole('button', { name: /connect/i })).toBeVisible();
-});
+  test('landing page loads with topbar and brand name', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+    await expect(page.getByText('predictwaves').first()).toBeVisible();
+  });
 
-test('tab nav is visible with Markets tab active', async ({ page }) => {
-  await page.goto('/');
-  const marketsTab = page.getByRole('link', { name: /^markets$/i });
-  await expect(marketsTab.first()).toBeVisible();
-});
+  test('landing page shows connect button for logged-out users', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+    await expect(page.getByRole('button', { name: /connect/i })).toBeVisible();
+  });
 
-test('search bar trigger is visible in topbar', async ({ page }) => {
-  await page.goto('/');
-  await expect(page.getByRole('button', { name: /search markets/i })).toBeVisible();
-});
+  test('tab nav is visible with Markets tab active', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+    const marketsTab = page.getByRole('link', { name: /^markets$/i });
+    await expect(marketsTab.first()).toBeVisible();
+  });
 
-test('category chips are visible on home page', async ({ page }) => {
-  await page.goto('/');
-  await expect(page.getByRole('button', { name: /^all$/i })).toBeVisible();
-});
+  test('search bar trigger is visible in topbar', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+    await expect(page.getByRole('button', { name: /search markets/i })).toBeVisible();
+  });
 
-test('partners strip links to /partners', async ({ page }) => {
-  await page.goto('/');
-  const strip = page.getByRole('link', { name: /for partners/i });
-  await expect(strip).toBeVisible();
-  await expect(strip).toHaveAttribute('href', '/partners');
+  test('category chips are visible on home page', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+    await expect(page.getByRole('button', { name: /^all$/i })).toBeVisible();
+  });
+
+  test('partners strip links to /partners', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+    const strip = page.getByRole('link', { name: /for partners/i }).first();
+    await expect(strip).toBeVisible();
+    await expect(strip).toHaveAttribute('href', '/partners');
+  });
 });
