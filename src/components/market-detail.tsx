@@ -57,7 +57,9 @@ function PriceChart({ conditionId, fxRate }: PriceChartProps) {
   const { data, isLoading } = usePriceHistory(conditionId, interval);
   const { displayCurrency: currency } = useCurrencyStore();
 
-  const chartData = (data?.history ?? []).map((pt) => ({
+  const rawHistory = data?.history;
+  const safeHistory = Array.isArray(rawHistory) ? rawHistory : [];
+  const chartData = safeHistory.map((pt) => ({
     t: pt.t,
     pct: Math.round(pt.p * 100),
     priceRaw: pt.p,

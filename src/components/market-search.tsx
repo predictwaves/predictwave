@@ -45,9 +45,9 @@ export function MarketSearch({ open: controlledOpen, onOpenChange }: MarketSearc
     }
     const controller = new AbortController();
     fetch(`/api/markets/search?q=${encodeURIComponent(query)}`, { signal: controller.signal })
-      .then((r) => r.json() as Promise<{ markets: SearchResult[] }>)
-      .then((d) => setResults(d.markets))
-      .catch(() => {});
+      .then((r) => r.json() as Promise<{ markets?: SearchResult[] }>)
+      .then((d) => setResults(Array.isArray(d?.markets) ? d.markets : []))
+      .catch(() => setResults([]));
     return () => controller.abort();
   }, [query]);
 

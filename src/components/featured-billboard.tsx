@@ -40,7 +40,9 @@ function resolveDate(isoDate: string): string {
 function BillboardChart({ conditionId }: { conditionId: string }) {
   const { data, isLoading } = usePriceHistory(conditionId, '1w');
 
-  const chartData = (data?.history ?? []).map((pt) => ({
+  const rawHistory = data?.history;
+  const safeHistory = Array.isArray(rawHistory) ? rawHistory : [];
+  const chartData = safeHistory.map((pt) => ({
     t: pt.t,
     pct: Math.round(pt.p * 100),
   }));

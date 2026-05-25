@@ -75,7 +75,12 @@ export async function getOrderbook(conditionId: string) {
   }
 }
 
-export async function getPriceHistory(tokenId: string, interval: '1h' | '1d' | '1w' | 'all') {
+export interface PricePoint { t: number; p: number }
+
+export async function getPriceHistory(
+  tokenId: string,
+  interval: '1h' | '1d' | '1w' | 'all',
+): Promise<PricePoint[]> {
   try {
     const c = getClient();
     const intervalMap: Record<string, PriceHistoryInterval> = {
@@ -84,7 +89,15 @@ export async function getPriceHistory(tokenId: string, interval: '1h' | '1d' | '
       '1w': PriceHistoryInterval.ONE_WEEK,
       all: PriceHistoryInterval.MAX,
     };
-    return c.getPricesHistory({ market: tokenId, interval: intervalMap[interval] ?? PriceHistoryInterval.ONE_DAY });
+    const result = await c.getPricesHistory({
+      market: tokenId,
+      interval: intervalMap[interval] ?? PriceHistoryInterval.ONE_DAY,
+    });
+    // SDK may return either a raw array OR { history: [...] } — normalize to plain array.
+    if (Array.isArray(result)) return result as PricePoint[];
+    const wrapped = result as { history?: unknown };
+    if (Array.isArray(wrapped?.history)) return wrapped.history as PricePoint[];
+    return [];
   } catch (e) {
     console.error('getPriceHistory failed', tokenId, e);
     return [];
