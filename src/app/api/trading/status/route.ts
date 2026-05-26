@@ -5,16 +5,18 @@ import { getPrivyServerClient } from '@/lib/privy-server';
 
 const schema = z.object({ privyAccessToken: z.string() });
 
+// Returns whether the caller already has stored trading credentials (i.e. setup done),
+// so returning users skip the setup step.
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const parsed = schema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ hasCreds: false });
+  if (!parsed.success) return NextResponse.json({ ready: false });
 
   try {
     const verified = await getPrivyServerClient().verifyAuthToken(parsed.data.privyAccessToken);
     const creds = await getStoredUserCreds(verified.userId);
-    return NextResponse.json({ hasCreds: !!creds });
+    return NextResponse.json({ ready: !!creds });
   } catch {
-    return NextResponse.json({ hasCreds: false });
+    return NextResponse.json({ ready: false });
   }
 }

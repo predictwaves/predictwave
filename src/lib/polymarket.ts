@@ -1,20 +1,15 @@
 import { ClobClient, Chain, PriceHistoryInterval } from '@polymarket/clob-client';
-import { serverEnv } from './env';
+
+const CLOB_HOST = 'https://clob.polymarket.com';
 
 let _client: ClobClient | null = null;
 
+// Read-only CLOB client. Market data, orderbooks, and price history are public
+// endpoints, so no API credentials are needed. Trading runs through the unified
+// @polymarket/client SDK server-side (see lib/polymarket-trading.ts).
 function getClient(): ClobClient {
   if (_client) return _client;
-  _client = new ClobClient(
-    serverEnv.POLYMARKET_API_HOST,
-    Chain.POLYGON,
-    undefined,
-    {
-      key: serverEnv.POLYMARKET_API_KEY,
-      secret: serverEnv.POLYMARKET_API_SECRET,
-      passphrase: serverEnv.POLYMARKET_API_PASSPHRASE,
-    },
-  );
+  _client = new ClobClient(CLOB_HOST, Chain.POLYGON);
   return _client;
 }
 

@@ -2,34 +2,32 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MarketMeta } from '@/lib/polymarket';
 
-// --- Mutable mock state, reset per test ---
 const state = {
   ready: true,
   authenticated: false,
-  address: undefined as string | undefined,
-  balance: 0,
-  allowance: 0n,
+  isReady: false,
+  isCheckingStatus: false,
+  isSettingUp: false,
 };
 
 vi.mock('@privy-io/react-auth', () => ({
   usePrivy: () => ({ ready: state.ready, authenticated: state.authenticated, login: vi.fn() }),
-  useWallets: () => ({ wallets: [] }),
-  getEmbeddedConnectedWallet: () =>
-    state.address ? { address: state.address, getEthereumProvider: vi.fn() } : undefined,
 }));
 
-vi.mock('@/hooks/use-wallet-balance', () => ({
-  useWalletBalance: () => ({ data: state.balance, isLoading: false }),
+vi.mock('@/hooks/use-trading-session', () => ({
+  useTradingSession: () => ({
+    isReady: state.isReady,
+    isCheckingStatus: state.isCheckingStatus,
+    runSetup: vi.fn(),
+    isSettingUp: state.isSettingUp,
+    setupError: null,
+  }),
 }));
-vi.mock('@/hooks/use-usdc-allowance', () => ({
-  useUsdcAllowance: () => ({ data: state.allowance }),
-}));
+
 vi.mock('@/hooks/use-place-order', () => ({
   usePlaceOrder: () => ({ mutate: vi.fn(), isPending: false, isError: false, error: null }),
 }));
-vi.mock('@/hooks/use-approve-usdc', () => ({
-  useApproveUsdc: () => ({ mutate: vi.fn(), isPending: false, isError: false, error: null }),
-}));
+
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 import { OrderPanel } from '@/components/order-panel';
@@ -58,9 +56,9 @@ function renderPanel() {
 beforeEach(() => {
   state.ready = true;
   state.authenticated = false;
-  state.address = undefined;
-  state.balance = 0;
-  state.allowance = 0n;
+  state.isReady = false;
+  state.isCheckingStatus = false;
+  state.isSettingUp = false;
 });
 afterEach(cleanup);
 
@@ -70,39 +68,30 @@ describe('OrderPanel button states', () => {
     expect(screen.getByRole('button', { name: /sign in to trade/i })).toBeInTheDocument();
   });
 
-  it('prompts funding when authenticated with zero balance', () => {
+  it('prompts one-time setup when authenticated but session not ready', () => {
     state.authenticated = true;
-    state.address = '0x1111111111111111111111111111111111111111';
-    state.balance = 0;
     renderPanel();
-    expect(screen.getByText(/fund your wallet/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /set up trading/i })).toBeInTheDocument();
   });
 
-  it('prompts one-time approval when funded but not approved', () => {
+  it('shows setup-in-progress label while setting up', () => {
     state.authenticated = true;
-    state.address = '0x1111111111111111111111111111111111111111';
-    state.balance = 50;
-    state.allowance = 0n;
+    state.isSettingUp = true;
     renderPanel();
-    expect(screen.getByRole('button', { name: /approve usdc/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /setting up trading/i })).toBeInTheDocument();
   });
 
-  it('shows "Enter an amount" when funded and approved but no amount typed', () => {
+  it('shows "Enter an amount" when ready but no amount', () => {
     state.authenticated = true;
-    state.address = '0x1111111111111111111111111111111111111111';
-    state.balance = 50;
-    state.allowance = 2n ** 200n;
+    state.isReady = true;
     renderPanel();
     expect(screen.getByRole('button', { name: /enter an amount/i })).toBeInTheDocument();
   });
 
-  it('shows a buy CTA once an amount within balance is entered', () => {
+  it('shows a buy CTA once ready and an amount is entered', () => {
     state.authenticated = true;
-    state.address = '0x1111111111111111111111111111111111111111';
-    state.balance = 50;
-    state.allowance = 2n ** 200n;
+    state.isReady = true;
     renderPanel();
-    // 20,000 NGN at fx 1700 ≈ $11.76 USDC, under the $50 balance.
     fireEvent.change(screen.getByLabelText(/order amount/i), { target: { value: '20000' } });
     expect(screen.getByRole('button', { name: /buy yes at/i })).toBeInTheDocument();
   });

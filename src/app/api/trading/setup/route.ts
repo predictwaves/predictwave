@@ -1,17 +1,13 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { deriveUserClobCreds } from '@/lib/polymarket-order';
 import { storeUserCreds } from '@/lib/polymarket-user-creds';
 import { getPrivyServerClient } from '@/lib/privy-server';
+import { resolveEmbeddedWallet, setupTrading } from '@/lib/polymarket-trading';
 
-const schema = z.object({
-  privyAccessToken: z.string(),
-  walletAddress: z.string().startsWith('0x'),
-  nonce: z.number(),
-  timestamp: z.number(),
-  signature: z.string().startsWith('0x'),
-});
+const schema = z.object({ privyAccessToken: z.string(), privyIdentityToken: z.string() });
 
+// One-time (idempotent) trading setup: ensures the user's gasless wallet + approvals
+// exist via Privy delegated signing, then persists the CLOB credentials.
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const parsed = schema.safeParse(body);
@@ -22,7 +18,6 @@ export async function POST(request: Request) {
     );
   }
 
-  // Verify the Privy token to confirm the caller owns this account.
   let privyUserId: string;
   try {
     const verified = await getPrivyServerClient().verifyAuthToken(parsed.data.privyAccessToken);
@@ -35,16 +30,18 @@ export async function POST(request: Request) {
   }
 
   try {
-    const creds = await deriveUserClobCreds({
-      walletAddress: parsed.data.walletAddress as `0x${string}`,
-      signature: parsed.data.signature as `0x${string}`,
-      nonce: parsed.data.nonce,
-      timestamp: parsed.data.timestamp,
-    });
-    await storeUserCreds(privyUserId, parsed.data.walletAddress, creds);
-    return NextResponse.json({ ok: true });
+    const embedded = await resolveEmbeddedWallet(parsed.data.privyIdentityToken);
+    if (!embedded) {
+      return NextResponse.json(
+        { error: { code: 'NO_WALLET', message: 'No embedded wallet found' } },
+        { status: 400 },
+      );
+    }
+    const { creds, walletAddress } = await setupTrading(embedded);
+    await storeUserCreds(privyUserId, walletAddress, creds);
+    return NextResponse.json({ ready: true, walletAddress });
   } catch (e) {
     const message = e instanceof Error ? e.message : 'unknown';
-    return NextResponse.json({ error: { code: 'DERIVE_FAILED', message } }, { status: 502 });
+    return NextResponse.json({ error: { code: 'SETUP_FAILED', message } }, { status: 502 });
   }
 }

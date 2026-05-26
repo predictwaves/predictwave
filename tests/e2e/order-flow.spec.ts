@@ -1,21 +1,18 @@
 import { expect, test } from '@playwright/test';
 
-// Full prepare → sign → submit requires an authenticated Privy session with a funded,
-// approved embedded wallet, which can't be established headlessly. These specs verify the
-// order panel is wired and rendering, and that the order API routes respond to the
-// prepare/submit contract. The signed end-to-end path is covered by the manual funded-wallet
-// test described in the Phase 4 prompt.
+// The full setup → order flow runs server-side via Privy delegated signing and can't be
+// exercised headlessly. These specs verify the order panel renders and gates correctly
+// for a logged-out visitor. The signed end-to-end path is covered by the manual test.
 //
-// The panel lives on a market detail page driven by live Polymarket data, so run serially
-// and wait for network idle to avoid competing for the single dev server.
+// The panel lives on a live-data market detail page, so run serially and wait for idle.
 
 async function openFirstMarket(page: import('@playwright/test').Page) {
   await page.goto('/');
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
   await page.waitForSelector('main a[href^="/markets/"]', { timeout: 30_000 });
   await page.locator('main a[href^="/markets/"]').first().click();
   await page.waitForURL(/\/markets\/[^/]+$/, { waitUntil: 'commit' });
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 }
 
 test.describe.serial('order flow (Polymarket-live)', () => {
@@ -27,13 +24,11 @@ test.describe.serial('order flow (Polymarket-live)', () => {
     await expect(page.getByRole('button', { name: /^buy yes$/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /^buy no$/i })).toBeVisible();
     await expect(page.getByLabel(/order amount/i)).toBeVisible();
-    // Unauthenticated default CTA.
     await expect(page.getByRole('button', { name: /sign in to trade/i })).toBeVisible();
   });
 
   test('switching to Buy NO updates the active tab', async ({ page }) => {
     await openFirstMarket(page);
-
     const noTab = page.getByRole('button', { name: /^buy no$/i });
     await noTab.click();
     await expect(noTab).toHaveAttribute('aria-pressed', 'true');
@@ -41,17 +36,7 @@ test.describe.serial('order flow (Polymarket-live)', () => {
 
   test('preview updates live as the amount changes', async ({ page }) => {
     await openFirstMarket(page);
-
-    const input = page.getByLabel(/order amount/i);
-    await input.fill('20000');
-    // Shares preview should become non-zero once an amount is entered.
+    await page.getByLabel(/order amount/i).fill('20000');
     await expect(page.getByText(/shares/i).first()).toBeVisible();
-  });
-
-  test('orders/prepare validates input', async ({ request }) => {
-    const res = await request.post('/api/orders/prepare', { data: { bad: 'input' } });
-    expect(res.status()).toBe(400);
-    const body = await res.json();
-    expect(body.error.code).toBe('BAD_INPUT');
   });
 });

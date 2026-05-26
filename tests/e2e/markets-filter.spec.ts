@@ -6,7 +6,7 @@ test.describe.serial('markets filter (Polymarket-live)', () => {
 
   test('category tab filter updates URL and shows filtered results', async ({ page }) => {
     await page.goto('/markets');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForSelector('main a[href^="/markets/"]', { timeout: 30_000 });
 
     // Click the Crypto tab
@@ -19,7 +19,7 @@ test.describe.serial('markets filter (Polymarket-live)', () => {
 
   test('topbar is visible on markets page', async ({ page }) => {
     await page.goto('/markets');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     // Logo / wordmark
     await expect(page.getByText('predictwaves')).toBeVisible();
     // Navigation links

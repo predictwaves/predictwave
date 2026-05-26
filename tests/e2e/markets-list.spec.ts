@@ -7,7 +7,7 @@ test.describe.serial('markets list (Polymarket-live)', () => {
 
   test('markets list loads and shows market cards', async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Category chips should be visible
     await expect(page.getByRole('button', { name: /^all$/i })).toBeVisible();
@@ -31,11 +31,11 @@ test.describe.serial('markets list (Polymarket-live)', () => {
 
   test('market detail page renders chart and orderbook', async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForSelector('main a[href^="/markets/"]', { timeout: 30_000 });
     await page.locator('main a[href^="/markets/"]').first().click();
     await page.waitForURL(/\/markets\/[^/]+$/, { waitUntil: 'commit' });
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Chart should render (recharts uses svg)
     await expect(page.locator('svg.recharts-surface').first()).toBeVisible({ timeout: 20_000 });
@@ -46,7 +46,7 @@ test.describe.serial('markets list (Polymarket-live)', () => {
 
   test('category chip filters markets', async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForSelector('main a[href^="/markets/"]', { timeout: 30_000 });
 
     // Click Politics chip

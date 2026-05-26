@@ -1,12 +1,9 @@
 'use client';
-import { getEmbeddedConnectedWallet, usePrivy, useWallets } from '@privy-io/react-auth';
-import Link from 'next/link';
+import { usePrivy } from '@privy-io/react-auth';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { useApproveUsdc } from '@/hooks/use-approve-usdc';
-import { type OrderPhase, usePlaceOrder } from '@/hooks/use-place-order';
-import { useUsdcAllowance } from '@/hooks/use-usdc-allowance';
-import { useWalletBalance } from '@/hooks/use-wallet-balance';
+import { usePlaceOrder } from '@/hooks/use-place-order';
+import { useTradingSession } from '@/hooks/use-trading-session';
 import { useCurrencyStore } from '@/lib/currency-store';
 import { formatNgn, formatUsdc, ngnToUsdc, usdcToNgn } from '@/lib/ngn';
 import type { MarketMeta } from '@/lib/polymarket';
@@ -21,100 +18,53 @@ interface OrderPanelProps {
 
 export function OrderPanel({ market, fxRate }: OrderPanelProps) {
   const { ready, authenticated, login } = usePrivy();
-  const { wallets } = useWallets();
-  const embedded = getEmbeddedConnectedWallet(wallets);
-  const address = embedded?.address as `0x${string}` | undefined;
-
-  const { data: balance } = useWalletBalance(address);
-  const { data: allowance } = useUsdcAllowance(address);
+  const { isReady, isCheckingStatus, runSetup, isSettingUp, setupError } = useTradingSession();
   const placeOrder = usePlaceOrder();
-  const approve = useApproveUsdc();
-
   const { displayCurrency: currency, toggle } = useCurrencyStore();
 
   const [tab, setTab] = useState<OutcomeTab>('YES');
   const [amount, setAmount] = useState('');
-  const [phase, setPhase] = useState<OrderPhase | null>(null);
 
-  const yesOutcome = market.outcomes[0];
-  const noOutcome = market.outcomes[1];
-  const outcome = tab === 'YES' ? yesOutcome : noOutcome;
+  const outcome = tab === 'YES' ? market.outcomes[0] : market.outcomes[1];
   const priceUsdc = outcome?.price ?? 0;
   const tokenId = outcome?.tokenId ?? '';
 
-  const usdcBalance = balance ?? 0;
-  // Amount is entered in the active display currency; orders settle in USDC.
   const amountNum = Number.parseFloat(amount) || 0;
   const sizeUsdc = currency === 'NGN' ? ngnToUsdc(amountNum, fxRate) : amountNum;
-
   const expectedShares = priceUsdc > 0 ? sizeUsdc / priceUsdc : 0;
-  const maxPayoutUsdc = expectedShares; // each share pays $1 if right
-  const feeUsdc = sizeUsdc * 0.001; // 10 bps placeholder
 
   const fmt = (usdc: number) =>
     currency === 'NGN' ? formatNgn(usdcToNgn(usdc, fxRate)) : formatUsdc(usdc);
 
-  const hasBalance = usdcBalance > 0;
-  const approved = (allowance ?? 0n) > 0n;
-  const insufficient = sizeUsdc > usdcBalance;
-
-  const isBusy = placeOrder.isPending || approve.isPending;
-
   const accent = tab === 'YES' ? 'var(--green-600)' : 'var(--red-600)';
   const accentBg = tab === 'YES' ? 'var(--green-50)' : 'var(--red-50)';
-
-  function setMaxAmount() {
-    setAmount(
-      currency === 'NGN'
-        ? Math.floor(usdcToNgn(usdcBalance, fxRate)).toString()
-        : usdcBalance.toFixed(2),
-    );
-  }
 
   function handleBuy() {
     if (!tokenId || sizeUsdc <= 0) return;
     placeOrder.mutate(
+      { conditionId: market.conditionId, tokenId, side: 'BUY', price: priceUsdc, size: expectedShares },
       {
-        conditionId: market.conditionId,
-        tokenId,
-        side: 'BUY',
-        priceUsdc,
-        sizeUsdc,
-        onPhase: setPhase,
-      },
-      {
-        onSuccess: (res: { expectedShares: number }) => {
-          toast.success(`Order placed — ${res.expectedShares} shares`);
+        onSuccess: () => {
+          toast.success(`Order placed — ${expectedShares.toFixed(2)} shares`);
           setAmount('');
-          setPhase(null);
         },
-        onSettled: () => setPhase(null),
       },
     );
   }
 
-  const submit: { label: string; disabled: boolean; onClick: () => void; href?: string } = (() => {
+  const submit: { label: string; disabled: boolean; onClick: () => void } = (() => {
     if (!ready) return { label: 'Loading…', disabled: true, onClick: () => {} };
     if (!authenticated) return { label: 'Sign in to trade', disabled: false, onClick: login };
-    if (!hasBalance)
-      return { label: 'Fund your wallet', disabled: false, onClick: () => {}, href: '/fund' };
-    if (!approved)
+    if (!isReady) {
+      if (isCheckingStatus) return { label: 'Checking your setup…', disabled: true, onClick: () => {} };
       return {
-        label: approve.isPending ? 'Approving…' : 'Approve USDC (one-time)',
-        disabled: approve.isPending,
-        onClick: () => approve.mutate(),
+        label: isSettingUp ? 'Setting up trading…' : 'Set up trading (one-time)',
+        disabled: isSettingUp,
+        onClick: () => runSetup(),
       };
-    if (placeOrder.isPending) {
-      const label =
-        phase === 'authorizing'
-          ? 'First-time setup…'
-          : phase === 'submitting'
-            ? 'Submitting…'
-            : 'Signing…';
-      return { label, disabled: true, onClick: () => {} };
     }
     if (sizeUsdc <= 0) return { label: 'Enter an amount', disabled: true, onClick: () => {} };
-    if (insufficient) return { label: 'Insufficient balance', disabled: true, onClick: () => {} };
+    if (placeOrder.isPending) return { label: 'Placing order…', disabled: true, onClick: () => {} };
     return { label: `Buy ${tab} at ${fmt(priceUsdc)}`, disabled: false, onClick: handleBuy };
   })();
 
@@ -179,9 +129,7 @@ export function OrderPanel({ market, fxRate }: OrderPanelProps) {
                 key={ngn}
                 type="button"
                 onClick={() =>
-                  setAmount(
-                    currency === 'NGN' ? ngn.toString() : ngnToUsdc(ngn, fxRate).toFixed(2),
-                  )
+                  setAmount(currency === 'NGN' ? ngn.toString() : ngnToUsdc(ngn, fxRate).toFixed(2))
                 }
                 className="rounded-full border px-3 py-1 text-xs font-medium"
                 style={{ borderColor: 'var(--gray-200)', color: 'var(--gray-600)' }}
@@ -189,14 +137,6 @@ export function OrderPanel({ market, fxRate }: OrderPanelProps) {
                 {currency === 'NGN' ? formatNgn(ngn) : formatUsdc(ngnToUsdc(ngn, fxRate))}
               </button>
             ))}
-            <button
-              type="button"
-              onClick={setMaxAmount}
-              className="rounded-full border px-3 py-1 text-xs font-medium"
-              style={{ borderColor: 'var(--gray-200)', color: 'var(--gray-600)' }}
-            >
-              Max
-            </button>
           </div>
         </div>
 
@@ -204,35 +144,28 @@ export function OrderPanel({ market, fxRate }: OrderPanelProps) {
         <div className="flex flex-col gap-1.5 rounded-lg p-3 text-xs" style={{ background: accentBg }}>
           <PreviewRow label="Shares" value={expectedShares.toFixed(2)} />
           <PreviewRow label="Avg price" value={`${fmt(priceUsdc)} / share`} />
-          <PreviewRow label="Max payout if right" value={fmt(maxPayoutUsdc)} color={accent} />
-          <PreviewRow label="Fee (0.1%)" value={fmt(feeUsdc)} />
+          <PreviewRow label="Max payout if right" value={fmt(expectedShares)} color={accent} />
         </div>
 
-        {/* Submit */}
-        {submit.href ? (
-          <Link
-            href={submit.href}
-            className="flex w-full items-center justify-center rounded-lg py-3 text-sm font-bold text-white transition-opacity hover:opacity-90"
-            style={{ background: accent }}
-          >
-            {submit.label}
-          </Link>
-        ) : (
-          <button
-            type="button"
-            onClick={submit.onClick}
-            disabled={submit.disabled || isBusy}
-            className="w-full rounded-lg py-3 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-            style={{ background: accent }}
-          >
-            {submit.label}
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={submit.onClick}
+          disabled={submit.disabled}
+          className="w-full rounded-lg py-3 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          style={{ background: accent }}
+        >
+          {submit.label}
+        </button>
 
-        {placeOrder.isPending && phase === 'authorizing' && (
+        {authenticated && !isReady && !isSettingUp && !isCheckingStatus && (
           <p className="text-xs leading-relaxed" style={{ color: 'var(--gray-600)' }}>
-            First trade requires a one-time wallet authorization. You'll see a sign request —
-            approve to continue.
+            First time: a one-time setup deploys your trading wallet and approvals. It's
+            gasless and handled for you — no wallet pop-ups.
+          </p>
+        )}
+        {setupError && (
+          <p className="text-xs font-medium" style={{ color: 'var(--red-600)' }}>
+            {setupError}
           </p>
         )}
         {placeOrder.isError && (
@@ -240,17 +173,12 @@ export function OrderPanel({ market, fxRate }: OrderPanelProps) {
             {placeOrder.error instanceof Error ? placeOrder.error.message : 'Order failed'}
           </p>
         )}
-        {approve.isError && (
-          <p className="text-xs font-medium" style={{ color: 'var(--red-600)' }}>
-            {approve.error instanceof Error ? approve.error.message : 'Approval failed'}
-          </p>
-        )}
 
         <p className="flex items-center gap-1 text-[11px]" style={{ color: 'var(--gray-400)' }}>
           <svg aria-hidden="true" className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          Powered by Polymarket • Settles in USDC on Polygon
+          Powered by Polymarket • Settles in pUSD on Polygon
         </p>
       </div>
     </div>

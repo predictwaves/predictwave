@@ -19,17 +19,15 @@ const serverSchema = z.object({
   // Alchemy
   ALCHEMY_API_KEY: z.string().min(1),
 
-  // Polymarket
-  POLYMARKET_API_HOST: z.string().url().default('https://clob.polymarket.com'),
-  POLYMARKET_API_KEY: z.string().min(1),
-  POLYMARKET_API_SECRET: z.string().min(1),
-  POLYMARKET_API_PASSPHRASE: z.string().min(1),
-  // Address that owns the CLOB API creds — used as POLY_ADDRESS when signing L2
-  // headers on order submission. The signature itself is an HMAC of the secret;
-  // no private key is needed here.
-  POLYMARKET_API_ADDRESS: z.string().optional(),
-  // Builder code for Polymarket's builder/operator fee-attribution program.
+  // Polymarket unified SDK (@polymarket/client) — server-side delegated signing.
+  // Relayer API key authorizes gasless wallet setup; stays server-side only.
+  RELAYER_API_KEY: z.string().min(1),
+  RELAYER_API_KEY_ADDRESS: z.string().startsWith('0x'),
+  // Builder code attached to orders for revenue attribution.
   POLYMARKET_BUILDER_CODE: z.string().optional(),
+  // Optional Privy authorization key for delegated wallet signing (set once
+  // Delegated Actions / authorization keys are configured in the Privy dashboard).
+  PRIVY_AUTHORIZATION_KEY: z.string().optional(),
 
   // Supabase (service role — server only)
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
