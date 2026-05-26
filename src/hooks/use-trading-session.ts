@@ -1,12 +1,11 @@
 'use client';
-import { useIdentityToken, usePrivy } from '@privy-io/react-auth';
+import { getIdentityToken, usePrivy } from '@privy-io/react-auth';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 // Client-side view of the server-managed trading session. All signing happens server
 // side via Privy delegated signing — the browser just triggers setup and reads status.
 export function useTradingSession() {
   const { authenticated, getAccessToken } = usePrivy();
-  const { identityToken } = useIdentityToken();
   const queryClient = useQueryClient();
 
   const statusQuery = useQuery({
@@ -29,10 +28,16 @@ export function useTradingSession() {
     mutationFn: async () => {
       const token = await getAccessToken();
       if (!token) throw new Error('Not authenticated');
+      // Server-side delegated wallet ops need the identity token; fetch it on demand
+      // (the reactive hook value can be null before hydration).
+      const idToken = await getIdentityToken();
+      if (!idToken) {
+        throw new Error('Identity token unavailable — enable Identity Tokens in your Privy dashboard');
+      }
       const res = await fetch('/api/trading/setup', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ privyAccessToken: token, privyIdentityToken: identityToken ?? '' }),
+        body: JSON.stringify({ privyAccessToken: token, privyIdentityToken: idToken }),
       });
       if (!res.ok) {
         const e = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;

@@ -4,7 +4,10 @@ import { storeUserCreds } from '@/lib/polymarket-user-creds';
 import { getPrivyServerClient } from '@/lib/privy-server';
 import { resolveEmbeddedWallet, setupTrading } from '@/lib/polymarket-trading';
 
-const schema = z.object({ privyAccessToken: z.string(), privyIdentityToken: z.string() });
+const schema = z.object({
+  privyAccessToken: z.string().min(1),
+  privyIdentityToken: z.string().min(1),
+});
 
 // One-time (idempotent) trading setup: ensures the user's gasless wallet + approvals
 // exist via Privy delegated signing, then persists the CLOB credentials.

@@ -1,5 +1,5 @@
 'use client';
-import { useIdentityToken, usePrivy } from '@privy-io/react-auth';
+import { getIdentityToken, usePrivy } from '@privy-io/react-auth';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface PlaceOrderArgs {
@@ -14,20 +14,23 @@ interface PlaceOrderArgs {
 // through the unified SDK with the builder code attached.
 export function usePlaceOrder() {
   const { getAccessToken } = usePrivy();
-  const { identityToken } = useIdentityToken();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (args: PlaceOrderArgs) => {
       const token = await getAccessToken();
       if (!token) throw new Error('Not authenticated');
+      const idToken = await getIdentityToken();
+      if (!idToken) {
+        throw new Error('Identity token unavailable — enable Identity Tokens in your Privy dashboard');
+      }
       const res = await fetch('/api/trading/place-order', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           ...args,
           privyAccessToken: token,
-          privyIdentityToken: identityToken ?? '',
+          privyIdentityToken: idToken,
         }),
       });
       if (!res.ok) {

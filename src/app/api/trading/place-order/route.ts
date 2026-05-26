@@ -5,8 +5,8 @@ import { getPrivyServerClient } from '@/lib/privy-server';
 import { placeOrder, resolveEmbeddedWallet } from '@/lib/polymarket-trading';
 
 const schema = z.object({
-  privyAccessToken: z.string(),
-  privyIdentityToken: z.string(),
+  privyAccessToken: z.string().min(1),
+  privyIdentityToken: z.string().min(1),
   tokenId: z.string(),
   side: z.enum(['BUY', 'SELL']),
   price: z.number().gt(0).lt(1),
