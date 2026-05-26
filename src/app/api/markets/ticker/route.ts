@@ -9,7 +9,6 @@ export interface TickerItem {
   question: string;
   category: string | null;
   yesProbability: number;
-  change24h: number;
 }
 
 export async function GET() {
@@ -29,14 +28,13 @@ export async function GET() {
       const live = await getMarket(row.condition_id as string);
       if (!live?.active || live.closed) return null;
       const yesProbability = live.outcomes[0]?.price ?? 0;
+      // Real 24h change is deferred (needs per-market price history or a cached
+      // baseline); we show the honest current probability only — no direction signal.
       return {
         conditionId: live.conditionId,
         question: live.question,
         category: (row.category as string | null) ?? live.category,
         yesProbability,
-        // No cheap 24h series on the CLOB market object; use the deviation from
-        // even odds as the up/down signal (matches the ↑65% / ↓42% spec examples).
-        change24h: Math.round((yesProbability - 0.5) * 100),
         volume24h: live.volume24h,
       };
     }),

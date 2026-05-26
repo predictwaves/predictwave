@@ -7,7 +7,6 @@ interface TickerItem {
   question: string;
   category: string | null;
   yesProbability: number;
-  change24h: number;
 }
 
 const CATEGORY_ICON: Record<string, string> = {
@@ -36,21 +35,17 @@ function useTicker() {
 
 function TickerEntry({ item }: { item: TickerItem }) {
   const pct = Math.round(item.yesProbability * 100);
-  const up = item.change24h >= 0;
   const icon = CATEGORY_ICON[item.category ?? 'world'] ?? CATEGORY_ICON.world;
   return (
     <Link
       href={`/markets/${item.conditionId}`}
       className="ticker-item inline-flex items-center gap-1.5"
+      style={{ color: 'var(--gray-700)' }}
     >
       <span aria-hidden="true">{icon}</span>
-      <span style={{ color: 'var(--gray-700)' }}>{clampQuestion(item.question)}</span>
-      <span
-        className="font-semibold tabular-nums"
-        style={{ color: up ? 'var(--green-600)' : 'var(--red-600)' }}
-      >
-        {up ? '↑' : '↓'}
-        {pct}%
+      <span>{clampQuestion(item.question)}</span>
+      <span className="tabular-nums" style={{ color: 'var(--gray-500)' }}>
+        · YES {pct}%
       </span>
     </Link>
   );
