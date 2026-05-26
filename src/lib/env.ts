@@ -34,6 +34,9 @@ const serverSchema = z.object({
   // Supabase (service role — server only)
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
 
+  // AES-256-GCM key (hex, 32 bytes) for encrypting per-user CLOB creds at rest.
+  CLOB_CREDS_ENCRYPTION_KEY: z.string().regex(/^[0-9a-fA-F]{64}$/, 'must be 32 bytes hex'),
+
   // FX
   FX_SOURCE_URL: z.string().url(),
   FX_CACHE_TTL_SECONDS: numericString(300),

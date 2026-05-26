@@ -5,6 +5,7 @@ import {
   OrderType,
   SignatureType,
   ClobClient,
+  createL1Headers,
   getContractConfig,
   COLLATERAL_TOKEN_DECIMALS,
   type EIP712TypedData,
@@ -14,6 +15,7 @@ import {
 import { BuilderConfig } from '@polymarket/builder-signing-sdk';
 import { encodeFunctionData, parseUnits } from 'viem';
 import { serverEnv } from './env';
+import type { ClobCreds } from './polymarket-user-creds';
 
 const CHAIN_ID = Chain.POLYGON;
 const { exchange: POLYMARKET_CTF_EXCHANGE, negRiskExchange: POLYMARKET_NEG_RISK_EXCHANGE } =
@@ -104,35 +106,104 @@ function getReadClient(): ClobClient {
   return _readClient;
 }
 
-let _submitClient: ClobClient | null = null;
-function getSubmitClient(): ClobClient {
-  if (_submitClient) return _submitClient;
-  const ownerAddress = serverEnv.POLYMARKET_API_ADDRESS;
-  if (!ownerAddress) {
-    throw new Error('POLYMARKET_API_ADDRESS is not configured — cannot authenticate order submission');
-  }
-  const creds = {
-    key: serverEnv.POLYMARKET_API_KEY,
-    secret: serverEnv.POLYMARKET_API_SECRET,
-    passphrase: serverEnv.POLYMARKET_API_PASSPHRASE,
-  };
-  // Polymarket's builder program reuses the trading creds. Attaching a BuilderConfig
-  // makes postOrder add POLY_BUILDER_* HMAC headers, which is how trades get attributed
-  // to PredictWaves for the revenue split.
-  const builderConfig = new BuilderConfig({ localBuilderCreds: creds });
-  _submitClient = new ClobClient(
+// Builder attribution reuses the platform's trading creds. Attached to the submit
+// client so postOrder adds POLY_BUILDER_* headers, crediting PredictWaves for the
+// revenue split — independent of the per-user creds that authenticate the order.
+function getBuilderConfig(): BuilderConfig {
+  return new BuilderConfig({
+    localBuilderCreds: {
+      key: serverEnv.POLYMARKET_API_KEY,
+      secret: serverEnv.POLYMARKET_API_SECRET,
+      passphrase: serverEnv.POLYMARKET_API_PASSPHRASE,
+    },
+  });
+}
+
+// Per-request submit client: L2-authenticated with the *user's* own CLOB creds so
+// POLY_ADDRESS (the maker) matches the creds owner — the fix for the maker≠creds-owner
+// 403. Builder headers ride along for attribution.
+function buildSubmitClient(userCreds: ClobCreds, makerAddress: string): ClobClient {
+  return new ClobClient(
     serverEnv.POLYMARKET_API_HOST,
     CHAIN_ID,
-    // biome-ignore lint/suspicious/noExplicitAny: SDK accepts an ethers-style signer; our stub only needs getAddress for L2 HMAC headers.
-    addressSigner(ownerAddress) as any,
-    creds,
-    undefined, // signatureType (per-order; set on each order instead)
-    undefined, // funderAddress (maker funds its own order — set per order)
+    // biome-ignore lint/suspicious/noExplicitAny: ethers-style stub; only getAddress is used (POLY_ADDRESS) — HMAC uses the creds secret.
+    addressSigner(makerAddress) as any,
+    userCreds,
+    undefined, // signatureType
+    undefined, // funderAddress
     undefined, // geoBlockToken
     undefined, // useServerTime
-    builderConfig,
+    getBuilderConfig(),
   );
-  return _submitClient;
+}
+
+const CLOB_AUTH_MESSAGE = 'This message attests that I control the given wallet';
+const CREATE_API_KEY_PATH = '/auth/api-key';
+const DERIVE_API_KEY_PATH = '/auth/derive-api-key';
+
+// EIP-712 typed data the user's wallet must sign for Polymarket L1 auth. Mirrors the
+// SDK's buildClobEip712Signature so the client signature verifies server-side.
+export function clobAuthTypedData(address: `0x${string}`, timestamp: number, nonce: number) {
+  return {
+    domain: { name: 'ClobAuthDomain', version: '1', chainId: CHAIN_ID },
+    types: {
+      EIP712Domain: [
+        { name: 'name', type: 'string' },
+        { name: 'version', type: 'string' },
+        { name: 'chainId', type: 'uint256' },
+      ],
+      ClobAuth: [
+        { name: 'address', type: 'address' },
+        { name: 'timestamp', type: 'string' },
+        { name: 'nonce', type: 'uint256' },
+        { name: 'message', type: 'string' },
+      ],
+    },
+    primaryType: 'ClobAuth',
+    message: {
+      address,
+      timestamp: String(timestamp),
+      nonce,
+      message: CLOB_AUTH_MESSAGE,
+    },
+  };
+}
+
+// Derives the user's CLOB API creds from a client-supplied L1 signature. We rebuild the
+// L1 headers with the client's exact timestamp/nonce (createApiKey would regenerate its
+// own timestamp, breaking the signature), then POST to create / fall back to derive.
+export async function deriveUserClobCreds(args: {
+  walletAddress: `0x${string}`;
+  signature: `0x${string}`;
+  timestamp: number;
+  nonce: number;
+}): Promise<ClobCreds> {
+  const stub = {
+    getAddress: async () => args.walletAddress,
+    _signTypedData: async () => args.signature,
+  };
+  const headers = await createL1Headers(
+    // biome-ignore lint/suspicious/noExplicitAny: ethers-style stub returning the pre-signed L1 signature.
+    stub as any,
+    CHAIN_ID,
+    args.nonce,
+    args.timestamp,
+  );
+  const host = serverEnv.POLYMARKET_API_HOST;
+  const headerRecord = headers as unknown as Record<string, string>;
+  type ApiKeyResponse = { apiKey?: string; secret?: string; passphrase?: string; error?: string };
+
+  let res = await fetch(`${host}${CREATE_API_KEY_PATH}`, { method: 'POST', headers: headerRecord });
+  let json = (await res.json().catch(() => ({}))) as ApiKeyResponse;
+  if (!json?.apiKey) {
+    res = await fetch(`${host}${DERIVE_API_KEY_PATH}`, { method: 'GET', headers: headerRecord });
+    json = (await res.json().catch(() => ({}))) as ApiKeyResponse;
+  }
+  const { apiKey, secret, passphrase } = json;
+  if (!apiKey || !secret || !passphrase) {
+    throw new Error(json?.error ?? `Credential derivation failed (${res.status})`);
+  }
+  return { key: apiKey, secret, passphrase };
 }
 
 async function resolveTickSize(tokenId: string): Promise<TickSize> {
@@ -226,11 +297,13 @@ export async function submitSignedOrder(args: {
   signature: `0x${string}`;
   orderHash: `0x${string}`;
   conditionId: string;
+  userCreds: ClobCreds;
 }): Promise<SubmitResult> {
   const msg = args.typedData.message as Record<string, string | number>;
+  const maker = String(msg.maker);
   const signedOrder: SignedOrder = {
     salt: String(msg.salt),
-    maker: String(msg.maker),
+    maker,
     signer: String(msg.signer),
     taker: String(msg.taker),
     tokenId: String(msg.tokenId),
@@ -244,10 +317,8 @@ export async function submitSignedOrder(args: {
     signature: args.signature,
   };
 
-  const res = (await getSubmitClient().postOrder(signedOrder, OrderType.GTC)) as Record<
-    string,
-    unknown
-  >;
+  const client = buildSubmitClient(args.userCreds, maker);
+  const res = (await client.postOrder(signedOrder, OrderType.GTC)) as Record<string, unknown>;
   return {
     orderId: (res.orderID as string) ?? (res.orderId as string) ?? null,
     status: (res.status as string) ?? (res.success ? 'matched' : 'unknown'),

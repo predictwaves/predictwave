@@ -104,12 +104,15 @@ export function OrderPanel({ market, fxRate }: OrderPanelProps) {
         disabled: approve.isPending,
         onClick: () => approve.mutate(),
       };
-    if (placeOrder.isPending)
-      return {
-        label: phase === 'submitting' ? 'Submitting…' : 'Signing…',
-        disabled: true,
-        onClick: () => {},
-      };
+    if (placeOrder.isPending) {
+      const label =
+        phase === 'authorizing'
+          ? 'First-time setup…'
+          : phase === 'submitting'
+            ? 'Submitting…'
+            : 'Signing…';
+      return { label, disabled: true, onClick: () => {} };
+    }
     if (sizeUsdc <= 0) return { label: 'Enter an amount', disabled: true, onClick: () => {} };
     if (insufficient) return { label: 'Insufficient balance', disabled: true, onClick: () => {} };
     return { label: `Buy ${tab} at ${fmt(priceUsdc)}`, disabled: false, onClick: handleBuy };
@@ -226,6 +229,12 @@ export function OrderPanel({ market, fxRate }: OrderPanelProps) {
           </button>
         )}
 
+        {placeOrder.isPending && phase === 'authorizing' && (
+          <p className="text-xs leading-relaxed" style={{ color: 'var(--gray-600)' }}>
+            First trade requires a one-time wallet authorization. You'll see a sign request —
+            approve to continue.
+          </p>
+        )}
         {placeOrder.isError && (
           <p className="text-xs font-medium" style={{ color: 'var(--red-600)' }}>
             {placeOrder.error instanceof Error ? placeOrder.error.message : 'Order failed'}

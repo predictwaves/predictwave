@@ -1,8 +1,9 @@
 'use client';
-import { getEmbeddedConnectedWallet, useWallets } from '@privy-io/react-auth';
+import { getEmbeddedConnectedWallet, usePrivy, useWallets } from '@privy-io/react-auth';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useDeriveClobCreds } from '@/hooks/use-derive-clob-creds';
 
-export type OrderPhase = 'signing' | 'submitting';
+export type OrderPhase = 'authorizing' | 'signing' | 'submitting';
 
 interface PlaceOrderArgs {
   conditionId: string;
@@ -19,6 +20,8 @@ interface ApiError {
 
 export function usePlaceOrder() {
   const { wallets } = useWallets();
+  const { getAccessToken } = usePrivy();
+  const derive = useDeriveClobCreds();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -26,6 +29,23 @@ export function usePlaceOrder() {
       const embedded = getEmbeddedConnectedWallet(wallets);
       if (!embedded) throw new Error('Wallet not ready');
       const address = embedded.address as `0x${string}`;
+      const accessToken = await getAccessToken();
+      if (!accessToken) throw new Error('Not authenticated');
+
+      // 0) One-time: ensure the user has their own CLOB creds. First trade signs an
+      // L1 auth message so the server can derive + store them.
+      const hasRes = await fetch('/api/orders/has-creds', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ privyAccessToken: accessToken }),
+      });
+      const { hasCreds } = (await hasRes.json().catch(() => ({ hasCreds: false }))) as {
+        hasCreds: boolean;
+      };
+      if (!hasCreds) {
+        args.onPhase?.('authorizing');
+        await derive.mutateAsync();
+      }
 
       // 1) Prepare — server builds the EIP-712 typed data + hash.
       const prepareRes = await fetch('/api/orders/prepare', {
@@ -47,12 +67,18 @@ export function usePlaceOrder() {
         params: [address, JSON.stringify(typedData)],
       })) as `0x${string}`;
 
-      // 3) Submit — server posts the signed order to Polymarket.
+      // 3) Submit — server posts the signed order using the user's own CLOB creds.
       args.onPhase?.('submitting');
       const submitRes = await fetch('/api/orders/submit', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ typedData, signature, orderHash, conditionId: args.conditionId }),
+        body: JSON.stringify({
+          typedData,
+          signature,
+          orderHash,
+          conditionId: args.conditionId,
+          privyAccessToken: accessToken,
+        }),
       });
       if (!submitRes.ok) {
         const e = (await submitRes.json().catch(() => null)) as ApiError | null;
