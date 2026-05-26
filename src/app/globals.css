@@ -71,3 +71,43 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.6);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 12px 32px rgba(0, 0, 0, 0.05);
 }
+
+/* News ticker — right-to-left scrolling market headlines.
+   Two identical copies of the content sit in the track; translating by -50% shifts
+   exactly one copy, so the loop is seamless and the strip is never blank. (A literal
+   100%→-100% pass leaves the strip empty between cycles.) */
+@keyframes ticker {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.ticker-track {
+  display: inline-flex;
+  align-items: center;
+  height: 100%;
+  white-space: nowrap;
+  will-change: transform;
+  animation: ticker 40s linear infinite;
+}
+
+.ticker-strip:hover .ticker-track {
+  animation-play-state: paused;
+}
+
+.ticker-item {
+  font-size: 13px;
+  padding: 0 1.5rem;
+}
+
+@media (max-width: 640px) {
+  .ticker-track {
+    animation-duration: 26s;
+  }
+  .ticker-item {
+    font-size: 12px;
+  }
+}

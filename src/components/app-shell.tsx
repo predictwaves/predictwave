@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { getEmbeddedConnectedWallet, usePrivy, useWallets } from '@privy-io/react-auth';
 import { ConnectButton } from './connect-button';
 import { MarketSearch } from './market-search';
+import { NewsTicker } from './news-ticker';
 import { useCurrencyStore } from '@/lib/currency-store';
 import { useWalletBalance } from '@/hooks/use-wallet-balance';
 import { useFxRate } from '@/hooks/use-fx-rate';
@@ -21,7 +22,6 @@ const TABS = [
   { href: '/portfolio', label: 'Portfolio', match: (p: string) => p.startsWith('/portfolio') },
   { href: '/fund', label: 'Deposit', match: (p: string) => p.startsWith('/fund') },
   { href: '/withdraw', label: 'Withdraw', match: (p: string) => p.startsWith('/withdraw') },
-  { href: '/partners', label: 'For partners', match: (p: string) => p.startsWith('/partners') },
 ];
 
 function WaveLogo() {
@@ -112,20 +112,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           boxShadow: '0 0 40px rgba(0,0,0,0.05)',
         }}
       >
-        {/* Partners strip */}
-        <div
-          className="px-7 py-2 text-xs"
-          style={{ background: 'var(--gray-900)', color: 'rgba(255,255,255,0.85)' }}
-        >
-          <Link
-            href="/partners"
-            className="hover:underline"
-            style={{ color: 'inherit' }}
-          >
-            For partners: see our integration approach and partnership ask →
-          </Link>
-        </div>
-
         {/* Sticky topbar */}
         <header
           className="sticky top-0 z-50 flex h-14 items-center justify-between gap-4 border-b px-7"
@@ -186,10 +172,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
+        {/* Live market news ticker — permanent chrome below the topbar */}
+        <NewsTicker />
+
         {/* Tab nav */}
         <nav
           className="sticky z-40 flex overflow-x-auto border-b px-4"
-          style={{ top: '56px', background: '#fff', borderColor: 'var(--gray-200)', scrollbarWidth: 'none' }}
+          style={{ top: '92px', background: '#fff', borderColor: 'var(--gray-200)', scrollbarWidth: 'none' }}
         >
           {TABS.map((tab) => {
             const active = tab.match(pathname);

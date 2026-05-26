@@ -7,7 +7,7 @@ test.describe.serial('markets filter (Polymarket-live)', () => {
   test('category tab filter updates URL and shows filtered results', async ({ page }) => {
     await page.goto('/markets');
     await page.waitForLoadState('networkidle');
-    await page.waitForSelector('a[href^="/markets/"]', { timeout: 30_000 });
+    await page.waitForSelector('main a[href^="/markets/"]', { timeout: 30_000 });
 
     // Click the Crypto tab
     await page.getByRole('button', { name: /^crypto$/i }).click();

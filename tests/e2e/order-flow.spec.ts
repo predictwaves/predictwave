@@ -12,8 +12,8 @@ import { expect, test } from '@playwright/test';
 async function openFirstMarket(page: import('@playwright/test').Page) {
   await page.goto('/');
   await page.waitForLoadState('networkidle');
-  await page.waitForSelector('a[href^="/markets/"]', { timeout: 30_000 });
-  await page.locator('a[href^="/markets/"]').first().click();
+  await page.waitForSelector('main a[href^="/markets/"]', { timeout: 30_000 });
+  await page.locator('main a[href^="/markets/"]').first().click();
   await page.waitForURL(/\/markets\/[^/]+$/, { waitUntil: 'commit' });
   await page.waitForLoadState('networkidle');
 }

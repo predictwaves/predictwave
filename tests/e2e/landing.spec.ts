@@ -36,11 +36,9 @@ test.describe.serial('landing (Polymarket-live)', () => {
     await expect(page.getByRole('button', { name: /^all$/i })).toBeVisible();
   });
 
-  test('partners strip links to /partners', async ({ page }) => {
+  test('partners link is no longer present', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
-    const strip = page.getByRole('link', { name: /for partners/i }).first();
-    await expect(strip).toBeVisible();
-    await expect(strip).toHaveAttribute('href', '/partners');
+    await expect(page.getByRole('link', { name: /for partners/i })).toHaveCount(0);
   });
 });

@@ -13,8 +13,8 @@ test.describe.serial('markets list (Polymarket-live)', () => {
     await expect(page.getByRole('button', { name: /^all$/i })).toBeVisible();
 
     // Wait for at least one market card to load (markets come from Polymarket API)
-    await page.waitForSelector('a[href^="/markets/"]', { timeout: 30_000 });
-    const cards = page.locator('a[href^="/markets/"]');
+    await page.waitForSelector('main a[href^="/markets/"]', { timeout: 30_000 });
+    const cards = page.locator('main a[href^="/markets/"]');
     const count = await cards.count();
     expect(count).toBeGreaterThanOrEqual(1);
 
@@ -32,8 +32,8 @@ test.describe.serial('markets list (Polymarket-live)', () => {
   test('market detail page renders chart and orderbook', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
-    await page.waitForSelector('a[href^="/markets/"]', { timeout: 30_000 });
-    await page.locator('a[href^="/markets/"]').first().click();
+    await page.waitForSelector('main a[href^="/markets/"]', { timeout: 30_000 });
+    await page.locator('main a[href^="/markets/"]').first().click();
     await page.waitForURL(/\/markets\/[^/]+$/, { waitUntil: 'commit' });
     await page.waitForLoadState('networkidle');
 
@@ -47,7 +47,7 @@ test.describe.serial('markets list (Polymarket-live)', () => {
   test('category chip filters markets', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
-    await page.waitForSelector('a[href^="/markets/"]', { timeout: 30_000 });
+    await page.waitForSelector('main a[href^="/markets/"]', { timeout: 30_000 });
 
     // Click Politics chip
     const politicsChip = page.getByRole('button', { name: /^politics$/i });
