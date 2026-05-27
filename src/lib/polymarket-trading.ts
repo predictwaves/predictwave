@@ -1,6 +1,7 @@
 import 'server-only';
 import { PrivyClient } from '@privy-io/node';
-import { createSecureClient, OrderSide, relayerApiKey } from '@polymarket/client';
+import { createSecureClient, OrderSide } from '@polymarket/client';
+import { builderApiKey } from '@polymarket/client/node';
 import { signerFrom } from '@polymarket/client/privy';
 import { clientEnv, serverEnv } from './env';
 import type { ClobCreds } from './polymarket-user-creds';
@@ -8,7 +9,8 @@ import type { ClobCreds } from './polymarket-user-creds';
 // Server-side Polymarket trading via the unified SDK with Privy *session signer*
 // signing. The user's embedded EOA signs on the server (no key in the browser) under
 // TEE execution: the server authorizes each Privy call with the session signer's
-// private key. The Relayer API key authorizes gasless setup and stays server-side only.
+// private key. The Builder API key authorizes gasless setup on the user's behalf and
+// stays server-side only.
 
 let _privy: PrivyClient | null = null;
 function nodePrivy(): PrivyClient {
@@ -62,11 +64,19 @@ function buildSigner(walletId: string) {
   });
 }
 
-const relayerKey = () =>
-  relayerApiKey({
-    key: serverEnv.RELAYER_API_KEY,
-    address: serverEnv.RELAYER_API_KEY_ADDRESS,
-  });
+// Builder API key authorizes relaying gasless txs on the *user's* behalf, where the
+// tx `from` is the user's wallet (not ours). relayerApiKey would require from == auth.
+const builderKey = () => {
+  const {
+    POLYMARKET_BUILDER_API_KEY: key,
+    POLYMARKET_BUILDER_SECRET: secret,
+    POLYMARKET_BUILDER_PASSPHRASE: passphrase,
+  } = serverEnv;
+  if (!key || !secret || !passphrase) {
+    throw new Error('Polymarket builder API credentials are not configured');
+  }
+  return builderApiKey({ key, secret, passphrase });
+};
 
 export interface SetupResult {
   creds: ClobCreds;
@@ -78,7 +88,7 @@ export interface SetupResult {
 export async function setupTrading(embedded: EmbeddedWallet): Promise<SetupResult> {
   let client = await createSecureClient({
     signer: buildSigner(embedded.walletId),
-    apiKey: relayerKey(),
+    apiKey: builderKey(),
   });
 
   if (!(await client.isGaslessReady())) {

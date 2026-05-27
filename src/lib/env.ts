@@ -19,10 +19,16 @@ const serverSchema = z.object({
   // Alchemy
   ALCHEMY_API_KEY: z.string().min(1),
 
-  // Polymarket unified SDK (@polymarket/client) — server-side delegated signing.
-  // Relayer API key authorizes gasless wallet setup; stays server-side only.
+  // Polymarket unified SDK (@polymarket/client) — server-side signing.
+  // Relayer API key relays the *builder's own* transactions (from must == auth
+  // address). Kept for other paths; NOT used for builder-on-behalf-of-user setup.
   RELAYER_API_KEY: z.string().min(1),
   RELAYER_API_KEY_ADDRESS: z.string().startsWith('0x'),
+  // Builder API credentials — authorize relaying gasless transactions on behalf of
+  // a user's wallet (builder-on-behalf-of-user). Used for createSecureClient setup.
+  POLYMARKET_BUILDER_API_KEY: z.string().optional(),
+  POLYMARKET_BUILDER_SECRET: z.string().optional(),
+  POLYMARKET_BUILDER_PASSPHRASE: z.string().optional(),
   // Builder code attached to orders for revenue attribution.
   POLYMARKET_BUILDER_CODE: z.string().optional(),
   // Privy authorization private key (base64 PKCS8, no PEM headers) for the session
