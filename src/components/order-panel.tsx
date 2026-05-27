@@ -18,7 +18,7 @@ interface OrderPanelProps {
 
 export function OrderPanel({ market, fxRate }: OrderPanelProps) {
   const { ready, authenticated, login } = usePrivy();
-  const { isReady, isCheckingStatus, identityTokenReady, runSetup, isSettingUp, setupError } =
+  const { isReady, isCheckingStatus, identityTokenReady, runSetup, isSettingUp, setupPhase, setupError } =
     useTradingSession();
   const placeOrder = usePlaceOrder();
   const { displayCurrency: currency, toggle } = useCurrencyStore();
@@ -61,8 +61,10 @@ export function OrderPanel({ market, fxRate }: OrderPanelProps) {
       // Wait for the Privy identity token to hydrate before allowing setup (it's null
       // for a moment after auth); avoids firing setup with an empty token.
       if (!identityTokenReady) return { label: 'Preparing…', disabled: true, onClick: () => {} };
+      const settingUpLabel =
+        setupPhase === 'authorizing' ? 'Authorize trading…' : 'Setting up trading…';
       return {
-        label: isSettingUp ? 'Setting up trading…' : 'Set up trading (one-time)',
+        label: isSettingUp ? settingUpLabel : 'Set up trading (one-time)',
         disabled: isSettingUp,
         onClick: () => runSetup(),
       };

@@ -21,6 +21,7 @@ vi.mock('@/hooks/use-trading-session', () => ({
     identityTokenReady: true,
     runSetup: vi.fn(),
     isSettingUp: state.isSettingUp,
+    setupPhase: state.isSettingUp ? 'setting-up' : 'idle',
     setupError: null,
   }),
 }));

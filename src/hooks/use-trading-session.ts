@@ -1,13 +1,31 @@
 'use client';
-import { useIdentityToken, usePrivy } from '@privy-io/react-auth';
+import {
+  getEmbeddedConnectedWallet,
+  useDelegatedActions,
+  useIdentityToken,
+  usePrivy,
+  useWallets,
+} from '@privy-io/react-auth';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 
-// Client-side view of the server-managed trading session. All signing happens server
-// side via Privy delegated signing — the browser just triggers setup and reads status.
+type SetupPhase = 'idle' | 'authorizing' | 'setting-up';
+
+// Client-side view of the server-managed trading session. Signing happens server-side
+// via Privy delegated actions, so the user first grants the app permission to act on
+// their wallet (one-time consent modal), then the server runs setup + places orders.
 export function useTradingSession() {
-  const { authenticated, getAccessToken } = usePrivy();
+  const { authenticated, getAccessToken, user } = usePrivy();
   const { identityToken } = useIdentityToken();
+  const { wallets } = useWallets();
+  const { delegateWallet } = useDelegatedActions();
   const queryClient = useQueryClient();
+  const [phase, setPhase] = useState<SetupPhase>('idle');
+
+  // Embedded wallet delegated to the app? Its linked-account carries the flag.
+  const isDelegated = !!user?.linkedAccounts?.find(
+    (a) => a.type === 'wallet' && (a as { delegated?: boolean }).delegated,
+  );
 
   const statusQuery = useQuery({
     queryKey: ['trading-status'],
@@ -29,11 +47,21 @@ export function useTradingSession() {
     mutationFn: async () => {
       const token = await getAccessToken();
       if (!token) throw new Error('Not authenticated');
-      // Server-side delegated wallet ops need the identity token. Gate on it so we
-      // never send an empty token (which the server rejects).
       if (!identityToken) {
         throw new Error('Identity token not yet available — please refresh and try again');
       }
+
+      // 1) One-time consent: delegate the embedded wallet to the app so the server can
+      // sign on the user's behalf. Skipped if already delegated (returning user).
+      if (!isDelegated) {
+        const embedded = getEmbeddedConnectedWallet(wallets);
+        if (!embedded) throw new Error('Wallet not ready');
+        setPhase('authorizing');
+        await delegateWallet({ address: embedded.address, chainType: 'ethereum' });
+      }
+
+      // 2) Server-side gasless setup (deploy + approvals) using delegated signing.
+      setPhase('setting-up');
       const res = await fetch('/api/trading/setup', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -48,16 +76,16 @@ export function useTradingSession() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trading-status'] });
     },
+    onSettled: () => setPhase('idle'),
   });
 
   return {
     isReady: statusQuery.data?.ready ?? false,
     isCheckingStatus: statusQuery.isLoading,
-    // Identity token hydrates slightly after auth; gate setup on it so the user can't
-    // trigger a request before the token is available (Privy returns null while loading).
     identityTokenReady: !!identityToken,
     runSetup: setup.mutate,
     isSettingUp: setup.isPending,
+    setupPhase: phase,
     setupError: setup.error instanceof Error ? setup.error.message : null,
   };
 }
