@@ -1,7 +1,35 @@
 // Run with: node --env-file=.env.local --import=tsx/esm scripts/seed-from-polymarket.ts
 // Or:       pnpm dlx tsx --env-file .env.local scripts/seed-from-polymarket.ts
 import { createClient } from '@supabase/supabase-js';
-import { getTopMarketsByVolume } from '../src/lib/polymarket';
+import { classifyCategory } from '../src/lib/polymarket';
+
+// The CLOB markets endpoint returns zero volume and mostly point-spread sports markets.
+// The Gamma API exposes real volume24hr and supports ordering, so it's the right source
+// for a "top by 24h volume" curated feed. (Read pages still use clob-client.)
+interface GammaMarket {
+  conditionId: string;
+  question: string;
+  volume24hr: number;
+  active: boolean;
+  closed: boolean;
+}
+
+async function fetchTopMarkets(limit: number): Promise<GammaMarket[]> {
+  const url =
+    `https://gamma-api.polymarket.com/markets?limit=${limit}` +
+    '&order=volume24hr&ascending=false&active=true&closed=false&archived=false';
+  const res = await fetch(url, { headers: { accept: 'application/json' } });
+  if (!res.ok) throw new Error(`Gamma fetch failed: ${res.status}`);
+  const json = (await res.json()) as unknown;
+  const arr = (Array.isArray(json) ? json : []) as Record<string, unknown>[];
+  return arr.map((m) => ({
+    conditionId: String(m.conditionId ?? ''),
+    question: String(m.question ?? ''),
+    volume24hr: Number(m.volume24hr ?? 0),
+    active: Boolean(m.active),
+    closed: Boolean(m.closed),
+  }));
+}
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -29,15 +57,13 @@ const slugify = (q: string) =>
     .slice(0, 80);
 
 async function main() {
-  console.log('Fetching top 50 Polymarket markets by 24h volume…');
-  const markets = await getTopMarketsByVolume(50);
+  console.log('Fetching top Polymarket markets by 24h volume (Gamma API)…');
+  // Over-fetch so we still land ~50 after dropping point-spreads/zero-volume.
+  const markets = await fetchTopMarkets(120);
 
-  // getTopMarketsByVolume already drops inactive/closed; also require live volume and
-  // exclude point-spread markets. Categories (politics/sports/crypto/nigeria/world)
-  // are all kept.
-  const curated = markets.filter(
-    (m) => m.active && !m.closed && m.volume24h > 0 && !isPointSpread(m.question),
-  );
+  const curated = markets
+    .filter((m) => m.conditionId && m.active && !m.closed && m.volume24hr > 0 && !isPointSpread(m.question))
+    .slice(0, 50);
   console.log(`Got ${markets.length}; ${curated.length} after filtering.`);
 
   if (curated.length === 0) {
@@ -49,7 +75,7 @@ async function main() {
     condition_id: m.conditionId,
     market_slug: slugify(m.question),
     curator_note: null,
-    category: m.category,
+    category: classifyCategory(m.question),
     featured_rank: index < 8 ? index + 1 : null, // top 8 featured
     hidden: false,
   }));
