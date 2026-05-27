@@ -65,6 +65,9 @@ const clientSchema = z.object({
   // setup, so the server can sign on their behalf under TEE execution. The matching
   // private key is PRIVY_AUTHORIZATION_KEY (server-only).
   NEXT_PUBLIC_PRIVY_SESSION_SIGNER_ID: z.string().optional(),
+  // Polymarket builder code (public on-chain attribution tag) attached to orders.
+  // Client-side signing reads it here; not a secret.
+  NEXT_PUBLIC_POLYMARKET_BUILDER_CODE: z.string().optional(),
 
   // Polygon
   NEXT_PUBLIC_POLYGON_RPC: z.string().url(),
@@ -107,6 +110,7 @@ const clientRuntimeEnv: Record<string, string | undefined> = {
   NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
   NEXT_PUBLIC_PRIVY_APP_ID: process.env.NEXT_PUBLIC_PRIVY_APP_ID,
   NEXT_PUBLIC_PRIVY_SESSION_SIGNER_ID: process.env.NEXT_PUBLIC_PRIVY_SESSION_SIGNER_ID,
+  NEXT_PUBLIC_POLYMARKET_BUILDER_CODE: process.env.NEXT_PUBLIC_POLYMARKET_BUILDER_CODE,
   NEXT_PUBLIC_POLYGON_RPC: process.env.NEXT_PUBLIC_POLYGON_RPC,
   NEXT_PUBLIC_POLYMARKET_CHAIN_ID: process.env.NEXT_PUBLIC_POLYMARKET_CHAIN_ID,
   NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,

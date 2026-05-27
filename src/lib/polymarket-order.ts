@@ -1,6 +1,5 @@
-// Order placement runs through the unified @polymarket/client SDK server-side
-// (see lib/polymarket-trading.ts + /api/trading/*). This module only exposes the
-// read-only positions lookup used by /api/wallet/positions.
+// Order placement runs client-side (see lib/polymarket-trading-client.ts). This module
+// only exposes the read-only positions lookup used by /api/wallet/positions.
 
 export interface UserPosition {
   conditionId: string;

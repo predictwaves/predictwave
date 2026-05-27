@@ -1,6 +1,7 @@
 'use client';
-import { useIdentityToken, usePrivy } from '@privy-io/react-auth';
+import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { loadSetup, placeOrder } from '@/lib/polymarket-trading-client';
 
 interface PlaceOrderArgs {
   conditionId: string;
@@ -10,34 +11,30 @@ interface PlaceOrderArgs {
   size: number; // shares
 }
 
-// Places an order server-side: the server signs via Privy delegated signing and posts
-// through the unified SDK with the builder code attached.
+// Places an order client-side: the Privy embedded wallet signs the order (POLY_1271,
+// deposit wallet as maker) and posts it through the unified SDK with the builder code.
 export function usePlaceOrder() {
-  const { getAccessToken } = usePrivy();
-  const { identityToken } = useIdentityToken();
+  const { user } = usePrivy();
+  const { wallets } = useWallets();
   const queryClient = useQueryClient();
+  const address = user?.wallet?.address;
 
   return useMutation({
     mutationFn: async (args: PlaceOrderArgs) => {
-      const token = await getAccessToken();
-      if (!token) throw new Error('Not authenticated');
-      if (!identityToken) {
-        throw new Error('Identity token not yet available — please refresh and try again');
-      }
-      const res = await fetch('/api/trading/place-order', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          ...args,
-          privyAccessToken: token,
-          privyIdentityToken: identityToken,
-        }),
+      if (!address) throw new Error('Not authenticated');
+      const setup = loadSetup(address);
+      if (!setup) throw new Error('Run trading setup first');
+      const wallet = wallets.find((w) => w.address === address);
+      if (!wallet) throw new Error('Wallet not ready');
+
+      const result = await placeOrder(wallet, setup, {
+        tokenId: args.tokenId,
+        side: args.side,
+        price: args.price,
+        size: args.size,
       });
-      if (!res.ok) {
-        const e = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
-        throw new Error(e?.error?.message ?? 'Order failed');
-      }
-      return (await res.json()) as { ok: boolean; orderId: string };
+      if (!result.ok) throw new Error('Order was not accepted');
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['wallet-balance'] });
