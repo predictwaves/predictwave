@@ -4,6 +4,12 @@ import { storeUserCreds } from '@/lib/polymarket-user-creds';
 import { getPrivyServerClient } from '@/lib/privy-server';
 import { resolveEmbeddedWallet, setupTrading } from '@/lib/polymarket-trading';
 
+// Pin to Dublin: Polymarket geoblocks US regions (Vercel's default iad1), so the
+// CLOB/relayer calls in this route must run from a non-blocked EU region.
+export const runtime = 'nodejs';
+export const preferredRegion = 'dub1';
+export const maxDuration = 30;
+
 const schema = z.object({
   privyAccessToken: z.string().min(1),
   privyIdentityToken: z.string().min(1),

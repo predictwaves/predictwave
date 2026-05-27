@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server';
 import { getMarket, getPriceHistory } from '@/lib/polymarket';
 
 export const revalidate = 60;
+// Pin to Dublin: price-history reads hit Polymarket's CLOB, which geoblocks US regions
+// (Vercel's default iad1). Run from a non-blocked EU region.
+export const runtime = 'nodejs';
+export const preferredRegion = 'dub1';
+export const maxDuration = 30;
 
 export async function GET(
   req: Request,
