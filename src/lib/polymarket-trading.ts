@@ -1,7 +1,7 @@
 import 'server-only';
 import { PrivyClient } from '@privy-io/node';
 import { createSecureClient, OrderSide } from '@polymarket/client';
-import { fetchTickSize } from '@polymarket/client/actions';
+import { fetchTickSize, updateBalanceAllowance } from '@polymarket/client/actions';
 import { builderApiKey } from '@polymarket/client/node';
 import { signerFrom } from '@polymarket/client/privy';
 import { clientEnv, serverEnv } from './env';
@@ -81,6 +81,18 @@ export interface SetupResult {
   walletAddress: `0x${string}`;
 }
 
+// Refreshes the CLOB's cached collateral balance/allowance for the bound wallet. The
+// SDK derives signature_type from the client's wallet type (3/POLY_1271 for deposit
+// wallets), so the client MUST be bound to the deposit wallet when this is called.
+// Without it the CLOB can match against a stale zero balance and reject funded orders.
+async function refreshCollateralCache(
+  client: Awaited<ReturnType<typeof createSecureClient>>,
+): Promise<void> {
+  await updateBalanceAllowance(client, {
+    assetType: 'COLLATERAL',
+  } as unknown as Parameters<typeof updateBalanceAllowance>[1]);
+}
+
 // Ensures the user's gasless trading wallet + approvals are set up, returning the CLOB
 // credentials and the deposit wallet address to persist. Runs the SDK's setup
 // transparently if not ready.
@@ -118,6 +130,10 @@ export async function setupTrading(embedded: EmbeddedWallet): Promise<SetupResul
   if (!deployed) {
     throw new Error(`Trading setup failed: deposit wallet ${walletAddress} not deployed on-chain`);
   }
+
+  // Prime the CLOB balance cache for the deposit wallet so it isn't stuck at a stale
+  // zero on the user's first order.
+  await refreshCollateralCache(client);
 
   // Re-authenticate bound to the deposit wallet so the derived CLOB API key is *owned
   // by* the deposit wallet. For POLY_1271 orders the SDK sets order.signer = deposit
@@ -163,6 +179,10 @@ export async function placeOrder(
       Parameters<typeof createSecureClient>[0]['credentials']
     >,
   });
+
+  // Refresh the CLOB balance cache so it reflects the deposit wallet's current pUSD
+  // balance + allowances before matching — otherwise it may reject against a stale zero.
+  await refreshCollateralCache(client);
 
   // The CLOB rejects prices that aren't exact multiples of the market's tick size, so
   // fetch the authoritative tick and round before submitting.
