@@ -3,7 +3,7 @@ import {
   getEmbeddedConnectedWallet,
   useIdentityToken,
   usePrivy,
-  useSessionSigners,
+  useSigners,
   useWallets,
 } from '@privy-io/react-auth';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -19,7 +19,7 @@ export function useTradingSession() {
   const { authenticated, getAccessToken, user } = usePrivy();
   const { identityToken } = useIdentityToken();
   const { wallets } = useWallets();
-  const { addSessionSigners } = useSessionSigners();
+  const { addSigners } = useSigners();
   const queryClient = useQueryClient();
   const [phase, setPhase] = useState<SetupPhase>('idle');
 
@@ -61,7 +61,7 @@ export function useTradingSession() {
         const embedded = getEmbeddedConnectedWallet(wallets);
         if (!embedded) throw new Error('Wallet not ready');
         setPhase('authorizing');
-        await addSessionSigners({
+        await addSigners({
           address: embedded.address,
           signers: [{ signerId }],
         });
