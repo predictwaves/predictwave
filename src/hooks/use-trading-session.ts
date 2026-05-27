@@ -53,6 +53,9 @@ export function useTradingSession() {
   return {
     isReady: statusQuery.data?.ready ?? false,
     isCheckingStatus: statusQuery.isLoading,
+    // Identity token hydrates slightly after auth; gate setup on it so the user can't
+    // trigger a request before the token is available (Privy returns null while loading).
+    identityTokenReady: !!identityToken,
     runSetup: setup.mutate,
     isSettingUp: setup.isPending,
     setupError: setup.error instanceof Error ? setup.error.message : null,
