@@ -99,10 +99,15 @@ export async function setupTrading(
   });
 
   client = await client.setupGaslessWallet();
-  if (!(await client.isGaslessReady())) {
-    const handle = await client.setupTradingApprovals();
-    await handle.wait();
-  }
+
+  // Always (re-)run trading approvals and wait for confirmation — it's idempotent, and
+  // isGaslessReady() can report true with INCOMPLETE approvals (e.g. the Neg Risk
+  // Adapter left at 0), which makes large orders fail with "allowance is not enough".
+  // Running it unconditionally guarantees every required spender is approved.
+  console.log('[trading-setup] running trading approvals…');
+  const handle = await client.setupTradingApprovals();
+  await handle.wait();
+  console.log('[trading-setup] trading approvals confirmed');
 
   const depositWallet = client.account.wallet as `0x${string}`;
   await refreshCollateralCache(client);

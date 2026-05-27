@@ -173,9 +173,22 @@ export function OrderPanel({ market, fxRate }: OrderPanelProps) {
           </p>
         )}
         {placeOrder.isError && (
-          <p className="text-xs font-medium" style={{ color: 'var(--red-600)' }}>
-            {placeOrder.error instanceof Error ? placeOrder.error.message : 'Order failed'}
-          </p>
+          <div className="flex flex-col gap-1">
+            <p className="text-xs font-medium" style={{ color: 'var(--red-600)' }}>
+              {placeOrder.error instanceof Error ? placeOrder.error.message : 'Order failed'}
+            </p>
+            {/* Allowance/approval errors are fixed by re-running setup (idempotent —
+                re-applies all token approvals incl. the Neg Risk Adapter). */}
+            <button
+              type="button"
+              onClick={() => runSetup()}
+              disabled={isSettingUp}
+              className="self-start text-xs font-semibold underline disabled:opacity-50"
+              style={{ color: 'var(--green-700)' }}
+            >
+              {isSettingUp ? 'Re-running setup…' : 'Re-run trading setup'}
+            </button>
+          </div>
         )}
 
         <p className="flex items-center gap-1 text-[11px]" style={{ color: 'var(--gray-400)' }}>
