@@ -127,6 +127,23 @@ export interface PlaceOrderResult {
   orderId: string | null;
 }
 
+// Maps raw Polymarket/CLOB errors to safe, user-facing messages. Every branch returns a
+// canned string, so raw API URLs and micro-unit amounts (e.g. "1383800") never reach the
+// user. Order matters: check the specific substrings before the generic fallback.
+export function friendlyOrderError(raw: string): string {
+  const m = raw.toLowerCase();
+  if (m.includes('allowance')) {
+    return 'Trading approval needed — re-run trading setup to fix.';
+  }
+  if (m.includes('not enough balance') || m.includes('insufficient') || m.includes('balance')) {
+    return 'Insufficient funds — add more pUSD via the Deposit page.';
+  }
+  if (m.includes('tick size') || m.includes('tick')) {
+    return 'Price adjusted to the nearest valid increment — please try again.';
+  }
+  return "Order couldn't be placed. Please try again.";
+}
+
 // Places a GTC limit order with the deposit wallet as maker (POLY_1271). Reuses the
 // cached CLOB creds; the order signature is produced client-side by the Privy wallet.
 export async function placeOrder(
