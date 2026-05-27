@@ -99,10 +99,19 @@ export async function setupTrading(embedded: EmbeddedWallet): Promise<SetupResul
     await handle.wait();
   }
 
-  return {
-    creds: client.credentials,
-    walletAddress: client.account.wallet as `0x${string}`,
-  };
+  const walletAddress = client.account.wallet as `0x${string}`;
+
+  // Re-authenticate bound to the deposit wallet so the derived CLOB API key is *owned
+  // by* the deposit wallet. For POLY_1271 orders the SDK sets order.signer = deposit
+  // wallet, and the CLOB requires order.signer == the API key's address; an EOA-owned
+  // key fails with "order signer address has to be the address of the API KEY".
+  const boundClient = await createSecureClient({
+    signer: buildSigner(embedded.walletId),
+    apiKey: builderKey(),
+    wallet: walletAddress,
+  });
+
+  return { creds: boundClient.credentials, walletAddress };
 }
 
 export interface PlaceOrderInput {
