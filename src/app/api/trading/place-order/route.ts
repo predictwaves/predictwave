@@ -4,10 +4,11 @@ import { getStoredUserCreds } from '@/lib/polymarket-user-creds';
 import { getPrivyServerClient } from '@/lib/privy-server';
 import { placeOrder, resolveEmbeddedWallet } from '@/lib/polymarket-trading';
 
-// Pin to Dublin: Polymarket geoblocks US regions (Vercel's default iad1), so the
-// CLOB/relayer calls in this route must run from a non-blocked EU region.
+// Run from Cape Town (cpt1) — South Africa is not on Polymarket's geoblock list, so the
+// CLOB/relayer egress IP is accepted. For Node functions the dashboard's
+// serverlessFunctionRegion is authoritative; preferredRegion just keeps the source in sync.
 export const runtime = 'nodejs';
-export const preferredRegion = 'dub1';
+export const preferredRegion = 'cpt1';
 export const maxDuration = 30;
 
 const schema = z.object({
