@@ -11,6 +11,7 @@ export function PositionsList({ fxRate }: { fxRate: number }) {
   // Positions are held by the deposit wallet (the order maker), not the signing EOA.
   const address = useDepositWallet();
   const { data, isLoading } = usePositions(address);
+  const { displayCurrency: currency } = useCurrencyStore();
 
   if (ready && !authenticated) {
     return <Empty>Sign in to see your positions.</Empty>;
@@ -30,11 +31,31 @@ export function PositionsList({ fxRate }: { fxRate: number }) {
     return <Empty>No open positions yet.</Empty>;
   }
 
+  const totalValue = positions.reduce((sum, p) => sum + p.valueUsdc, 0);
+  const totalLabel =
+    currency === 'NGN' ? formatNgn(usdcToNgn(totalValue, fxRate)) : formatUsdc(totalValue);
+
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      {positions.map((p) => (
-        <PositionCard key={`${p.conditionId}-${p.outcomeName}`} position={p} fxRate={fxRate} />
-      ))}
+    <div className="flex flex-col gap-3">
+      <div
+        className="flex items-baseline justify-between rounded-xl px-4 py-3.5"
+        style={{ background: 'var(--green-50)', border: '1px solid var(--green-100)' }}
+      >
+        <span
+          className="text-[11px] font-semibold uppercase tracking-widest"
+          style={{ color: 'var(--gray-500)', letterSpacing: '0.08em' }}
+        >
+          Total portfolio value
+        </span>
+        <span className="text-xl font-bold tabular-nums" style={{ color: 'var(--gray-900)' }}>
+          {totalLabel}
+        </span>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {positions.map((p) => (
+          <PositionCard key={`${p.conditionId}-${p.outcomeName}`} position={p} fxRate={fxRate} />
+        ))}
+      </div>
     </div>
   );
 }

@@ -1,8 +1,9 @@
 'use client';
 import Link from 'next/link';
-import { getEmbeddedConnectedWallet, usePrivy, useWallets } from '@privy-io/react-auth';
+import { usePrivy } from '@privy-io/react-auth';
 import { ConnectButton } from './connect-button';
 import { useCurrencyStore } from '@/lib/currency-store';
+import { useDepositWallet } from '@/hooks/use-deposit-wallet';
 import { useWalletBalance } from '@/hooks/use-wallet-balance';
 import { formatNgn, formatUsdc, usdcToNgn } from '@/lib/ngn';
 
@@ -11,10 +12,9 @@ interface WalletHubProps {
 }
 
 function BalanceCard({ fxRate }: WalletHubProps) {
-  const { wallets } = useWallets();
   const { user } = usePrivy();
-  const embeddedWallet = getEmbeddedConnectedWallet(wallets);
-  const address = embeddedWallet?.address as `0x${string}` | undefined;
+  // pUSD held by the deposit wallet is the real balance, not the EOA's holdings.
+  const address = useDepositWallet();
   const { data: balance, isLoading } = useWalletBalance(address);
   const { displayCurrency, balanceVisible, toggleBalanceVisible } = useCurrencyStore();
 
@@ -33,9 +33,9 @@ function BalanceCard({ fxRate }: WalletHubProps) {
         </p>
 
         {/* Balance card */}
-        <div className="card-iridescent rounded-2xl p-6">
+        <div className="card-iridescent rounded-2xl" style={{ padding: '48px' }}>
           <div>
-            <div className="mb-1 flex items-center justify-between">
+            <div className="mb-3 flex items-center justify-between">
               <p
                 className="text-[11px] font-semibold uppercase tracking-widest"
                 style={{ color: 'var(--gray-500)', letterSpacing: '0.1em' }}
@@ -53,16 +53,16 @@ function BalanceCard({ fxRate }: WalletHubProps) {
               </button>
             </div>
 
-            <div className="mb-5 font-semibold tabular-nums" style={{ fontSize: '42px', color: 'var(--gray-900)', lineHeight: 1.1 }}>
+            <div className="mb-3 font-semibold tabular-nums" style={{ fontSize: '48px', color: 'var(--gray-900)', lineHeight: 1.1 }}>
               {isLoading
-                ? <span className="inline-block h-10 w-32 animate-pulse rounded-lg" style={{ background: 'var(--gray-200)' }} />
+                ? <span className="inline-block h-12 w-40 animate-pulse rounded-lg" style={{ background: 'var(--gray-200)' }} />
                 : balanceVisible
                 ? displayBalance
                 : '••••••'}
             </div>
 
-            <p className="mb-5 text-xs" style={{ color: 'var(--gray-400)' }}>
-              {usdc.toFixed(4)} USDC · Polygon
+            <p className="mb-8 text-xs" style={{ color: 'var(--gray-400)' }}>
+              {usdc.toFixed(2)} pUSD · Polygon
             </p>
 
             {/* Action pills */}

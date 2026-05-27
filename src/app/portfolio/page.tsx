@@ -1,4 +1,5 @@
 import { getCachedRate } from '@/lib/fx';
+import { ActivityList } from '@/components/activity-list';
 import { PositionsList } from '@/components/positions-list';
 import { WalletHub } from '@/components/wallet-hub';
 
@@ -27,14 +28,7 @@ export default async function PortfolioPage() {
         >
           Recent activity
         </p>
-        <div
-          className="flex items-center justify-center rounded-xl border py-12"
-          style={{ borderColor: 'var(--gray-200)', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
-        >
-          <p className="text-sm" style={{ color: 'var(--gray-400)' }}>
-            No recent activity · Phase 4
-          </p>
-        </div>
+        <ActivityList fxRate={fxRate} />
       </section>
     </>
   );
