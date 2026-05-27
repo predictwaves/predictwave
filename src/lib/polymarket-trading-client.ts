@@ -98,7 +98,12 @@ export async function setupTrading(
     apiKey: builderAuth(getAccessToken),
   });
 
+  console.log('[trading-setup] deploying/registering gasless wallet…');
   client = await client.setupGaslessWallet();
+  console.log('[trading-setup] gasless wallet bound', {
+    depositWallet: client.account.wallet,
+    gaslessReady: await client.isGaslessReady(),
+  });
 
   // Always (re-)run trading approvals and wait for confirmation — it's idempotent, and
   // isGaslessReady() can report true with INCOMPLETE approvals (e.g. the Neg Risk
@@ -141,11 +146,19 @@ export function friendlyOrderError(raw: string): string {
   if (m.includes('tick size') || m.includes('tick')) {
     return 'Price adjusted to the nearest valid increment — please try again.';
   }
+  if (m.includes('not registered') || m.includes('registry')) {
+    return 'Finishing your wallet setup — please try again in a moment.';
+  }
   return "Order couldn't be placed. Please try again.";
 }
 
 // Places a GTC limit order with the deposit wallet as maker (POLY_1271). Reuses the
 // cached CLOB creds; the order signature is produced client-side by the Privy wallet.
+function isNotRegisteredError(e: unknown): boolean {
+  const m = (e instanceof Error ? e.message : String(e)).toLowerCase();
+  return m.includes('not registered') || m.includes('registry');
+}
+
 export async function placeOrder(
   wallet: PrivyWallet,
   setup: TradingSetup,
@@ -153,7 +166,7 @@ export async function placeOrder(
   getAccessToken: GetAccessToken,
 ): Promise<PlaceOrderResult> {
   const walletClient = await buildWalletClient(wallet);
-  const client = await createSecureClient({
+  let client = await createSecureClient({
     signer: signerFrom(walletClient),
     wallet: setup.depositWallet,
     apiKey: builderAuth(getAccessToken),
@@ -168,13 +181,26 @@ export async function placeOrder(
   const price = roundToTick(input.price, tickSize);
 
   const builderCode = clientEnv.NEXT_PUBLIC_POLYMARKET_BUILDER_CODE;
-  const response = await client.placeLimitOrder({
+  const order = {
     tokenId: input.tokenId,
     side: input.side === 'BUY' ? OrderSide.BUY : OrderSide.SELL,
     price,
     size: input.size,
     ...(builderCode ? { builderCode: builderCode as `0x${string}` } : {}),
-  });
+  };
+
+  let response: Awaited<ReturnType<typeof client.placeLimitOrder>>;
+  try {
+    response = await client.placeLimitOrder(order);
+  } catch (e) {
+    // New deposit wallets can fail the relayer's registry check if registration hasn't
+    // propagated yet. setupGaslessWallet() deploys+registers (idempotent) and returns a
+    // freshly-bound client — re-run it once and retry the order.
+    if (!isNotRegisteredError(e)) throw e;
+    console.warn('[place-order] wallet not registered — re-running setupGaslessWallet and retrying');
+    client = await client.setupGaslessWallet();
+    response = await client.placeLimitOrder(order);
+  }
 
   return { ok: Boolean(response.ok), orderId: response.ok ? response.orderId : null };
 }
