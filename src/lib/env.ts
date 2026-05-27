@@ -26,9 +26,9 @@ const serverSchema = z.object({
   RELAYER_API_KEY_ADDRESS: z.string().startsWith('0x'),
   // Builder API credentials — authorize relaying gasless transactions on behalf of
   // a user's wallet (builder-on-behalf-of-user). Used for createSecureClient setup.
-  POLYMARKET_BUILDER_API_KEY: z.string().optional(),
-  POLYMARKET_BUILDER_SECRET: z.string().optional(),
-  POLYMARKET_BUILDER_PASSPHRASE: z.string().optional(),
+  POLYMARKET_BUILDER_API_KEY: z.string().min(1),
+  POLYMARKET_BUILDER_SECRET: z.string().min(1),
+  POLYMARKET_BUILDER_PASSPHRASE: z.string().min(1),
   // Builder code attached to orders for revenue attribution.
   POLYMARKET_BUILDER_CODE: z.string().optional(),
   // Privy authorization private key (base64 PKCS8, no PEM headers) for the session

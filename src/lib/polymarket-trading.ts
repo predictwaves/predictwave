@@ -66,17 +66,12 @@ function buildSigner(walletId: string) {
 
 // Builder API key authorizes relaying gasless txs on the *user's* behalf, where the
 // tx `from` is the user's wallet (not ours). relayerApiKey would require from == auth.
-const builderKey = () => {
-  const {
-    POLYMARKET_BUILDER_API_KEY: key,
-    POLYMARKET_BUILDER_SECRET: secret,
-    POLYMARKET_BUILDER_PASSPHRASE: passphrase,
-  } = serverEnv;
-  if (!key || !secret || !passphrase) {
-    throw new Error('Polymarket builder API credentials are not configured');
-  }
-  return builderApiKey({ key, secret, passphrase });
-};
+const builderKey = () =>
+  builderApiKey({
+    key: serverEnv.POLYMARKET_BUILDER_API_KEY,
+    secret: serverEnv.POLYMARKET_BUILDER_SECRET,
+    passphrase: serverEnv.POLYMARKET_BUILDER_PASSPHRASE,
+  });
 
 export interface SetupResult {
   creds: ClobCreds;
