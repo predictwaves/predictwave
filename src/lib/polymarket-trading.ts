@@ -7,6 +7,7 @@ import { signerFrom } from '@polymarket/client/privy';
 import { clientEnv, serverEnv } from './env';
 import type { ClobCreds } from './polymarket-user-creds';
 import { roundToTick } from './tick';
+import { polygonClient } from './viem';
 
 // Server-side Polymarket trading via the unified SDK with Privy *session signer*
 // signing. The user's embedded EOA signs on the server (no key in the browser) under
@@ -89,6 +90,9 @@ export async function setupTrading(embedded: EmbeddedWallet): Promise<SetupResul
     apiKey: builderKey(),
   });
 
+  const readyBefore = await client.isGaslessReady();
+  console.log('[trading-setup] start', { eoa: embedded.address, readyBefore });
+
   // Bind to the gasless deposit wallet (idempotent: deploys or reuses the signer's
   // deterministic Deposit Wallet). Polymarket requires the deposit wallet — not the
   // signing EOA — to be the order maker, so order placement must use this address.
@@ -100,6 +104,20 @@ export async function setupTrading(embedded: EmbeddedWallet): Promise<SetupResul
   }
 
   const walletAddress = client.account.wallet as `0x${string}`;
+
+  // Verify setup actually completed. Polymarket deposit wallets are NOT counterfactual —
+  // an undeployed address can't hold collateral or be an order maker — so confirm both
+  // gasless readiness and real on-chain bytecode, and fail loudly if either is missing.
+  const ready = await client.isGaslessReady();
+  const code = await polygonClient.getCode({ address: walletAddress });
+  const deployed = Boolean(code) && code !== '0x';
+  console.log('[trading-setup] done', { depositWallet: walletAddress, ready, deployed });
+  if (!ready) {
+    throw new Error('Trading setup failed: gasless wallet not ready (isGaslessReady=false)');
+  }
+  if (!deployed) {
+    throw new Error(`Trading setup failed: deposit wallet ${walletAddress} not deployed on-chain`);
+  }
 
   // Re-authenticate bound to the deposit wallet so the derived CLOB API key is *owned
   // by* the deposit wallet. For POLY_1271 orders the SDK sets order.signer = deposit
