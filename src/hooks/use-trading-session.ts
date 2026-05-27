@@ -1,28 +1,30 @@
 'use client';
 import {
   getEmbeddedConnectedWallet,
-  useDelegatedActions,
   useIdentityToken,
   usePrivy,
+  useSessionSigners,
   useWallets,
 } from '@privy-io/react-auth';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { clientEnv } from '@/lib/env';
 
 type SetupPhase = 'idle' | 'authorizing' | 'setting-up';
 
 // Client-side view of the server-managed trading session. Signing happens server-side
-// via Privy delegated actions, so the user first grants the app permission to act on
-// their wallet (one-time consent modal), then the server runs setup + places orders.
+// under TEE execution, so the user first grants the server's session signer access to
+// their embedded wallet (one-time consent), then the server runs setup + places orders.
 export function useTradingSession() {
   const { authenticated, getAccessToken, user } = usePrivy();
   const { identityToken } = useIdentityToken();
   const { wallets } = useWallets();
-  const { delegateWallet } = useDelegatedActions();
+  const { addSessionSigners } = useSessionSigners();
   const queryClient = useQueryClient();
   const [phase, setPhase] = useState<SetupPhase>('idle');
 
-  // Embedded wallet delegated to the app? Its linked-account carries the flag.
+  // Session signer already provisioned on the app's embedded wallet? Privy sets the
+  // `delegated` flag on the wallet's linked-account once a signer is added.
   const isDelegated = !!user?.linkedAccounts?.find(
     (a) => a.type === 'wallet' && (a as { delegated?: boolean }).delegated,
   );
@@ -51,16 +53,21 @@ export function useTradingSession() {
         throw new Error('Identity token not yet available — please refresh and try again');
       }
 
-      // 1) One-time consent: delegate the embedded wallet to the app so the server can
-      // sign on the user's behalf. Skipped if already delegated (returning user).
+      // 1) One-time consent: grant the server's session signer access to the embedded
+      // wallet so it can sign on the user's behalf. Skipped if already provisioned.
       if (!isDelegated) {
+        const signerId = clientEnv.NEXT_PUBLIC_PRIVY_SESSION_SIGNER_ID;
+        if (!signerId) throw new Error('Session signer is not configured');
         const embedded = getEmbeddedConnectedWallet(wallets);
         if (!embedded) throw new Error('Wallet not ready');
         setPhase('authorizing');
-        await delegateWallet({ address: embedded.address, chainType: 'ethereum' });
+        await addSessionSigners({
+          address: embedded.address,
+          signers: [{ signerId }],
+        });
       }
 
-      // 2) Server-side gasless setup (deploy + approvals) using delegated signing.
+      // 2) Server-side gasless setup (deploy + approvals) via session-signer signing.
       setPhase('setting-up');
       const res = await fetch('/api/trading/setup', {
         method: 'POST',

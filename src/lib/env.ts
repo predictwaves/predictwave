@@ -25,8 +25,9 @@ const serverSchema = z.object({
   RELAYER_API_KEY_ADDRESS: z.string().startsWith('0x'),
   // Builder code attached to orders for revenue attribution.
   POLYMARKET_BUILDER_CODE: z.string().optional(),
-  // Optional Privy authorization key for delegated wallet signing (set once
-  // Delegated Actions / authorization keys are configured in the Privy dashboard).
+  // Privy authorization private key (base64 PKCS8, no PEM headers) for the session
+  // signer that signs on the user's behalf under TEE execution. Must correspond to
+  // NEXT_PUBLIC_PRIVY_SESSION_SIGNER_ID's key quorum in the Privy dashboard.
   PRIVY_AUTHORIZATION_KEY: z.string().optional(),
 
   // Supabase (service role — server only)
@@ -54,6 +55,10 @@ const clientSchema = z.object({
 
   // Privy
   NEXT_PUBLIC_PRIVY_APP_ID: z.string().min(20),
+  // Session signer (key quorum) id the user grants signing access to during trading
+  // setup, so the server can sign on their behalf under TEE execution. The matching
+  // private key is PRIVY_AUTHORIZATION_KEY (server-only).
+  NEXT_PUBLIC_PRIVY_SESSION_SIGNER_ID: z.string().optional(),
 
   // Polygon
   NEXT_PUBLIC_POLYGON_RPC: z.string().url(),
@@ -95,6 +100,7 @@ const isServer = typeof window === 'undefined';
 const clientRuntimeEnv: Record<string, string | undefined> = {
   NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
   NEXT_PUBLIC_PRIVY_APP_ID: process.env.NEXT_PUBLIC_PRIVY_APP_ID,
+  NEXT_PUBLIC_PRIVY_SESSION_SIGNER_ID: process.env.NEXT_PUBLIC_PRIVY_SESSION_SIGNER_ID,
   NEXT_PUBLIC_POLYGON_RPC: process.env.NEXT_PUBLIC_POLYGON_RPC,
   NEXT_PUBLIC_POLYMARKET_CHAIN_ID: process.env.NEXT_PUBLIC_POLYMARKET_CHAIN_ID,
   NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,

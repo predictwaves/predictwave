@@ -5,9 +5,10 @@ import { signerFrom } from '@polymarket/client/privy';
 import { clientEnv, serverEnv } from './env';
 import type { ClobCreds } from './polymarket-user-creds';
 
-// Server-side Polymarket trading via the unified SDK with Privy *delegated* signing.
-// The user's embedded EOA signs on the server (no key in the browser); the Relayer
-// API key authorizes gasless setup and stays server-side only.
+// Server-side Polymarket trading via the unified SDK with Privy *session signer*
+// signing. The user's embedded EOA signs on the server (no key in the browser) under
+// TEE execution: the server authorizes each Privy call with the session signer's
+// private key. The Relayer API key authorizes gasless setup and stays server-side only.
 
 let _privy: PrivyClient | null = null;
 function nodePrivy(): PrivyClient {
@@ -47,8 +48,18 @@ export async function resolveEmbeddedWallet(idToken: string): Promise<EmbeddedWa
   };
 }
 
+// TEE execution requires the server to authorize each signing call with the session
+// signer's private key, which the user granted access to during trading setup.
 function buildSigner(walletId: string) {
-  return signerFrom({ privy: nodePrivy(), walletId });
+  const authKey = serverEnv.PRIVY_AUTHORIZATION_KEY;
+  if (!authKey) {
+    throw new Error('PRIVY_AUTHORIZATION_KEY is not configured for session signing');
+  }
+  return signerFrom({
+    privy: nodePrivy(),
+    walletId,
+    authorizationContext: { authorization_private_keys: [authKey] },
+  });
 }
 
 const relayerKey = () =>
