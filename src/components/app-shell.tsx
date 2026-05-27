@@ -2,13 +2,15 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { getEmbeddedConnectedWallet, usePrivy, useWallets } from '@privy-io/react-auth';
+import { usePrivy } from '@privy-io/react-auth';
 import { ConnectButton } from './connect-button';
 import { MarketSearch } from './market-search';
 import { NewsTicker } from './news-ticker';
 import { useCurrencyStore } from '@/lib/currency-store';
 import { useWalletBalance } from '@/hooks/use-wallet-balance';
 import { useFxRate } from '@/hooks/use-fx-rate';
+import { useAppLogout } from '@/hooks/use-app-logout';
+import { useDepositWallet } from '@/hooks/use-deposit-wallet';
 import { formatNgn, formatUsdc, usdcToNgn } from '@/lib/ngn';
 import {
   DropdownMenu,
@@ -43,11 +45,9 @@ function WaveLogo() {
 }
 
 function BalancePill() {
-  const { wallets } = useWallets();
+  const address = useDepositWallet();
   const { data: fx } = useFxRate();
   const { displayCurrency } = useCurrencyStore();
-  const embeddedWallet = getEmbeddedConnectedWallet(wallets);
-  const address = embeddedWallet?.address as `0x${string}` | undefined;
   const { data: balance } = useWalletBalance(address);
 
   const usdc = balance ?? 0;
@@ -59,7 +59,7 @@ function BalancePill() {
     <span
       className="inline-flex h-8 items-center rounded-full border px-3 text-sm font-semibold tabular-nums"
       style={{ borderColor: 'var(--green-200)', background: 'var(--green-50)', color: 'var(--green-700)' }}
-      title={`$${usdc.toFixed(2)} USDC`}
+      title={`$${usdc.toFixed(2)} pUSD`}
     >
       {label}
     </span>
@@ -67,7 +67,8 @@ function BalancePill() {
 }
 
 function AvatarDropdown() {
-  const { user, logout } = usePrivy();
+  const { user } = usePrivy();
+  const appLogout = useAppLogout();
   const router = useRouter();
   const email = user?.email?.address ?? user?.google?.email ?? '';
   const initial = email.charAt(0).toUpperCase() || 'A';
@@ -88,7 +89,7 @@ function AvatarDropdown() {
           </div>
         )}
         <DropdownMenuItem onClick={() => router.push('/account')}>Your account</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => void logout()} style={{ color: 'var(--red-600)' }}>
+        <DropdownMenuItem onClick={() => void appLogout()} style={{ color: 'var(--red-600)' }}>
           Disconnect
         </DropdownMenuItem>
       </DropdownMenuContent>

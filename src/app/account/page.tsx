@@ -3,6 +3,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { ConnectButton } from '@/components/connect-button';
+import { useAppLogout } from '@/hooks/use-app-logout';
 import { useDepositWallet } from '@/hooks/use-deposit-wallet';
 import { useWalletBalance } from '@/hooks/use-wallet-balance';
 import { formatUsdc } from '@/lib/ngn';
@@ -78,7 +79,8 @@ function SettingsRow({
 }
 
 export default function AccountPage() {
-  const { ready, authenticated, user, logout } = usePrivy();
+  const { ready, authenticated, user } = usePrivy();
+  const logout = useAppLogout();
   const depositWallet = useDepositWallet();
   const { data: pusd } = useWalletBalance(depositWallet);
 

@@ -14,7 +14,7 @@ interface PlaceOrderArgs {
 // Places an order client-side: the Privy embedded wallet signs the order (POLY_1271,
 // deposit wallet as maker) and posts it through the unified SDK with the builder code.
 export function usePlaceOrder() {
-  const { user } = usePrivy();
+  const { user, getAccessToken } = usePrivy();
   const { wallets } = useWallets();
   const queryClient = useQueryClient();
   const address = user?.wallet?.address;
@@ -27,12 +27,17 @@ export function usePlaceOrder() {
       const wallet = wallets.find((w) => w.address === address);
       if (!wallet) throw new Error('Wallet not ready');
 
-      const result = await placeOrder(wallet, setup, {
-        tokenId: args.tokenId,
-        side: args.side,
-        price: args.price,
-        size: args.size,
-      });
+      const result = await placeOrder(
+        wallet,
+        setup,
+        {
+          tokenId: args.tokenId,
+          side: args.side,
+          price: args.price,
+          size: args.size,
+        },
+        getAccessToken,
+      );
       if (!result.ok) throw new Error('Order was not accepted');
       return result;
     },

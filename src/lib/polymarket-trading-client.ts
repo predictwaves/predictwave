@@ -37,7 +37,18 @@ export async function buildWalletClient(wallet: PrivyWallet): Promise<WalletClie
   });
 }
 
-const builderAuth = () => remoteBuilderSigning({ url: '/api/polymarket/sign' });
+// Privy access-token getter, threaded to the remote builder-signing endpoint so it can
+// authenticate the caller before signing with our builder credentials.
+type GetAccessToken = () => Promise<string | null>;
+
+const builderAuth = (getAccessToken: GetAccessToken) =>
+  remoteBuilderSigning({
+    url: '/api/polymarket/sign',
+    headers: async () => {
+      const token = await getAccessToken();
+      return token ? { Authorization: `Bearer ${token}` } : {};
+    },
+  });
 
 // Re-scan the deposit wallet's collateral so the CLOB doesn't match against a stale
 // zero. The SDK derives signature_type (3/POLY_1271) from the bound wallet type.
@@ -66,13 +77,25 @@ export function saveSetup(address: string, setup: TradingSetup): void {
   window.localStorage.setItem(storageKey(address), JSON.stringify(setup));
 }
 
+// Clears all cached CLOB credentials. Called on logout so a shared device doesn't leak
+// trading credentials to the next user.
+export function clearAllTradingSetups(): void {
+  if (typeof window === 'undefined') return;
+  for (const key of Object.keys(window.localStorage)) {
+    if (key.startsWith('pw:clob:')) window.localStorage.removeItem(key);
+  }
+}
+
 // Deploys/reuses the gasless deposit wallet + approvals and derives CLOB credentials
 // owned by the deposit wallet. Idempotent.
-export async function setupTrading(wallet: PrivyWallet): Promise<TradingSetup> {
+export async function setupTrading(
+  wallet: PrivyWallet,
+  getAccessToken: GetAccessToken,
+): Promise<TradingSetup> {
   const walletClient = await buildWalletClient(wallet);
   let client = await createSecureClient({
     signer: signerFrom(walletClient),
-    apiKey: builderAuth(),
+    apiKey: builderAuth(getAccessToken),
   });
 
   client = await client.setupGaslessWallet();
@@ -105,12 +128,13 @@ export async function placeOrder(
   wallet: PrivyWallet,
   setup: TradingSetup,
   input: PlaceOrderInput,
+  getAccessToken: GetAccessToken,
 ): Promise<PlaceOrderResult> {
   const walletClient = await buildWalletClient(wallet);
   const client = await createSecureClient({
     signer: signerFrom(walletClient),
     wallet: setup.depositWallet,
-    apiKey: builderAuth(),
+    apiKey: builderAuth(getAccessToken),
     credentials: setup.creds as unknown as NonNullable<
       Parameters<typeof createSecureClient>[0]['credentials']
     >,

@@ -10,7 +10,7 @@ type SetupPhase = 'idle' | 'setting-up';
 // wallet signs the gasless deposit-wallet deploy + approvals, and the resulting CLOB
 // credentials are cached in localStorage so returning users skip setup.
 export function useTradingSession() {
-  const { authenticated, user } = usePrivy();
+  const { authenticated, user, getAccessToken } = usePrivy();
   const { wallets } = useWallets();
   const queryClient = useQueryClient();
   const [phase, setPhase] = useState<SetupPhase>('idle');
@@ -29,7 +29,7 @@ export function useTradingSession() {
       const wallet = wallets.find((w) => w.address === address);
       if (!wallet) throw new Error('Wallet not ready');
       setPhase('setting-up');
-      const result = await setupTrading(wallet);
+      const result = await setupTrading(wallet, getAccessToken);
       saveSetup(address, result);
       return result;
     },
