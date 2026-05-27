@@ -1,8 +1,11 @@
 'use client';
-import { getEmbeddedConnectedWallet, usePrivy, useWallets } from '@privy-io/react-auth';
+import { usePrivy } from '@privy-io/react-auth';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { ConnectButton } from '@/components/connect-button';
+import { useDepositWallet } from '@/hooks/use-deposit-wallet';
+import { useWalletBalance } from '@/hooks/use-wallet-balance';
+import { formatUsdc } from '@/lib/ngn';
 
 function truncateMiddle(s: string, start = 8, end = 6): string {
   if (s.length <= start + end) return s;
@@ -76,7 +79,8 @@ function SettingsRow({
 
 export default function AccountPage() {
   const { ready, authenticated, user, logout } = usePrivy();
-  const { wallets } = useWallets();
+  const depositWallet = useDepositWallet();
+  const { data: pusd } = useWalletBalance(depositWallet);
 
   if (!ready) return null;
 
@@ -91,13 +95,11 @@ export default function AccountPage() {
     );
   }
 
-  const embeddedWallet = getEmbeddedConnectedWallet(wallets);
-  const address = embeddedWallet?.address ?? '';
   const email = user?.email?.address ?? user?.google?.email ?? '';
 
   async function handleCopyAddress() {
-    if (!address) return;
-    await navigator.clipboard.writeText(address);
+    if (!depositWallet) return;
+    await navigator.clipboard.writeText(depositWallet);
     toast.success('Address copied');
   }
 
@@ -114,12 +116,17 @@ export default function AccountPage() {
       {/* Wallet */}
       <div className="flex flex-col gap-2">
         <SectionHeader>Wallet</SectionHeader>
-        <SettingsRow
-          label="Polygon address"
-          value={truncateMiddle(address)}
-          action="Copy"
-          onAction={() => void handleCopyAddress()}
-        />
+        <SettingsRow label="Trading balance" value={formatUsdc(depositWallet ? (pusd ?? 0) : 0)} />
+        {depositWallet ? (
+          <SettingsRow
+            label="Deposit wallet"
+            value={truncateMiddle(depositWallet)}
+            action="Copy"
+            onAction={() => void handleCopyAddress()}
+          />
+        ) : (
+          <SettingsRow label="Deposit wallet" value="Set up trading to create" />
+        )}
         <SettingsRow label="Transaction history" href="/account/history" />
       </div>
 
@@ -148,7 +155,7 @@ export default function AccountPage() {
       </div>
 
       <p className="text-xs text-center" style={{ color: 'var(--gray-400)' }}>
-        Powered by Polygon · Stablecoin: USDC
+        Powered by Polygon · Stablecoin: pUSD
       </p>
     </main>
   );

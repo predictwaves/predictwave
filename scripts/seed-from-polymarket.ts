@@ -13,36 +13,65 @@ if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
+// Heuristic: drop NBA (and similar) point-spread markets — "Team vs. Team" with a
+// numeric line, or anything explicitly about a spread/cover. These clutter the feed.
+function isPointSpread(question: string): boolean {
+  const q = question.toLowerCase();
+  if (/\bspread\b|\bcover\b/.test(q)) return true;
+  return /\bvs\.?\b/.test(q) && /[+-]\d+(\.\d+)?/.test(q);
+}
+
+const slugify = (q: string) =>
+  q
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 80);
+
 async function main() {
   console.log('Fetching top 50 Polymarket markets by 24h volume…');
   const markets = await getTopMarketsByVolume(50);
-  console.log(`Got ${markets.length} markets. Upserting into curated_markets…`);
 
-  for (const [index, m] of markets.entries()) {
-    const slug = m.question
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '')
-      .slice(0, 80);
+  // getTopMarketsByVolume already drops inactive/closed; also require live volume and
+  // exclude point-spread markets. Categories (politics/sports/crypto/nigeria/world)
+  // are all kept.
+  const curated = markets.filter(
+    (m) => m.active && !m.closed && m.volume24h > 0 && !isPointSpread(m.question),
+  );
+  console.log(`Got ${markets.length}; ${curated.length} after filtering.`);
 
-    const { error } = await supabase.from('curated_markets').upsert(
-      {
-        condition_id: m.conditionId,
-        market_slug: slug,
-        curator_note: null,
-        category: m.category,
-        featured_rank: index < 12 ? index + 1 : null,
-        hidden: false,
-      },
-      { onConflict: 'condition_id' },
-    );
-    if (error) {
-      console.error(`Upsert failed for ${m.conditionId}:`, error.message);
-    } else {
-      console.log(`  [${index + 1}] ${slug}`);
-    }
+  if (curated.length === 0) {
+    console.error('No markets passed filtering — aborting without touching the table.');
+    process.exit(1);
   }
-  console.log('Done.');
+
+  const rows = curated.map((m, index) => ({
+    condition_id: m.conditionId,
+    market_slug: slugify(m.question),
+    curator_note: null,
+    category: m.category,
+    featured_rank: index < 8 ? index + 1 : null, // top 8 featured
+    hidden: false,
+  }));
+
+  // Replace the whole set: delete all existing rows, then insert the fresh batch. The
+  // fetch above is validated first so we never leave the table empty on a fetch failure.
+  console.log('Deleting existing curated_markets rows…');
+  const { error: delError } = await supabase
+    .from('curated_markets')
+    .delete()
+    .neq('condition_id', '');
+  if (delError) {
+    console.error('Delete failed:', delError.message);
+    process.exit(1);
+  }
+
+  const { error: insError } = await supabase.from('curated_markets').insert(rows);
+  if (insError) {
+    console.error('Insert failed:', insError.message);
+    process.exit(1);
+  }
+  console.log(`Inserted ${rows.length} markets (top 8 featured). Done.`);
 }
 
 main().catch((e: unknown) => {

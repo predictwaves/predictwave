@@ -1,14 +1,15 @@
 'use client';
-import { getEmbeddedConnectedWallet, usePrivy, useWallets } from '@privy-io/react-auth';
+import { usePrivy } from '@privy-io/react-auth';
 import Link from 'next/link';
+import { useDepositWallet } from '@/hooks/use-deposit-wallet';
 import { type Position, usePositions } from '@/hooks/use-positions';
 import { useCurrencyStore } from '@/lib/currency-store';
 import { formatNgn, formatUsdc, usdcToNgn } from '@/lib/ngn';
 
 export function PositionsList({ fxRate }: { fxRate: number }) {
   const { ready, authenticated } = usePrivy();
-  const { wallets } = useWallets();
-  const address = getEmbeddedConnectedWallet(wallets)?.address as `0x${string}` | undefined;
+  // Positions are held by the deposit wallet (the order maker), not the signing EOA.
+  const address = useDepositWallet();
   const { data, isLoading } = usePositions(address);
 
   if (ready && !authenticated) {
