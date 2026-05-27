@@ -80,21 +80,29 @@ export interface SetupResult {
   walletAddress: `0x${string}`;
 }
 
-// Ensures the user's gasless trading wallet + approvals are set up, returning the
-// CLOB credentials to persist. Runs the SDK's setup transparently if not ready.
+// Ensures the user's gasless trading wallet + approvals are set up, returning the CLOB
+// credentials and the deposit wallet address to persist. Runs the SDK's setup
+// transparently if not ready.
 export async function setupTrading(embedded: EmbeddedWallet): Promise<SetupResult> {
   let client = await createSecureClient({
     signer: buildSigner(embedded.walletId),
     apiKey: builderKey(),
   });
 
+  // Bind to the gasless deposit wallet (idempotent: deploys or reuses the signer's
+  // deterministic Deposit Wallet). Polymarket requires the deposit wallet — not the
+  // signing EOA — to be the order maker, so order placement must use this address.
+  client = await client.setupGaslessWallet();
+
   if (!(await client.isGaslessReady())) {
-    client = await client.setupGaslessWallet();
     const handle = await client.setupTradingApprovals();
     await handle.wait();
   }
 
-  return { creds: client.credentials, walletAddress: embedded.address };
+  return {
+    creds: client.credentials,
+    walletAddress: client.account.wallet as `0x${string}`,
+  };
 }
 
 export interface PlaceOrderInput {
@@ -114,12 +122,16 @@ export interface PlaceOrderResult {
 export async function placeOrder(
   embedded: EmbeddedWallet,
   creds: ClobCreds,
+  depositWallet: string,
   input: PlaceOrderInput,
 ): Promise<PlaceOrderResult> {
-  // Reuse stored creds (no relayer key needed for posting orders). SecureClientOptions
-  // is apiKey XOR credentials; stored creds are plain strings vs the SDK's branded types.
+  // Bind the client to the user's deposit wallet so it's the order maker — Polymarket
+  // rejects orders made directly by the EOA. Reuse stored creds (no relayer key needed
+  // for posting). SecureClientOptions is apiKey XOR credentials; stored creds are plain
+  // strings vs the SDK's branded types.
   const client = await createSecureClient({
     signer: buildSigner(embedded.walletId),
+    wallet: depositWallet,
     credentials: creds as unknown as NonNullable<
       Parameters<typeof createSecureClient>[0]['credentials']
     >,

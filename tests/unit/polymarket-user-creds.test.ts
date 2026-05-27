@@ -43,7 +43,10 @@ describe('polymarket-user-creds', () => {
     expect(row?.wallet_address).toBe('0xWALLET');
 
     const got = await getStoredUserCreds('did:privy:abc');
-    expect(got).toEqual({ key: 'K', secret: 'S', passphrase: 'P' });
+    expect(got).toEqual({
+      creds: { key: 'K', secret: 'S', passphrase: 'P' },
+      walletAddress: '0xWALLET',
+    });
   });
 
   it('returns null when no creds stored', async () => {

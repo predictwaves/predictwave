@@ -42,8 +42,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const creds = await getStoredUserCreds(privyUserId);
-  if (!creds) {
+  const stored = await getStoredUserCreds(privyUserId);
+  if (!stored) {
     return NextResponse.json(
       { error: { code: 'NO_CREDS', message: 'Run trading setup first' } },
       { status: 409 },
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-    const result = await placeOrder(embedded, creds, {
+    const result = await placeOrder(embedded, stored.creds, stored.walletAddress, {
       tokenId: parsed.data.tokenId,
       side: parsed.data.side,
       price: parsed.data.price,

@@ -14,8 +14,8 @@ export async function POST(request: Request) {
 
   try {
     const verified = await getPrivyServerClient().verifyAuthToken(parsed.data.privyAccessToken);
-    const creds = await getStoredUserCreds(verified.userId);
-    return NextResponse.json({ ready: !!creds });
+    const stored = await getStoredUserCreds(verified.userId);
+    return NextResponse.json({ ready: !!stored });
   } catch {
     return NextResponse.json({ ready: false });
   }

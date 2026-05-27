@@ -7,7 +7,13 @@ export interface ClobCreds {
   passphrase: string;
 }
 
-export async function getStoredUserCreds(privyUserId: string): Promise<ClobCreds | null> {
+export interface StoredUserCreds {
+  creds: ClobCreds;
+  // The user's Polymarket deposit wallet — the order maker, not the signing EOA.
+  walletAddress: string;
+}
+
+export async function getStoredUserCreds(privyUserId: string): Promise<StoredUserCreds | null> {
   const admin = createSupabaseAdmin();
   const { data } = await admin
     .from('user_clob_creds')
@@ -16,9 +22,12 @@ export async function getStoredUserCreds(privyUserId: string): Promise<ClobCreds
     .maybeSingle();
   if (!data) return null;
   return {
-    key: decrypt(data.encrypted_key as string),
-    secret: decrypt(data.encrypted_secret as string),
-    passphrase: decrypt(data.encrypted_passphrase as string),
+    creds: {
+      key: decrypt(data.encrypted_key as string),
+      secret: decrypt(data.encrypted_secret as string),
+      passphrase: decrypt(data.encrypted_passphrase as string),
+    },
+    walletAddress: data.wallet_address as string,
   };
 }
 
