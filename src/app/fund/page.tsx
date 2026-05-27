@@ -10,10 +10,9 @@ function truncateMiddle(s: string, start = 8, end = 6): string {
 }
 
 const ON_RAMPS = [
-  { name: 'Yellow Card', description: 'Buy USDC with Naira via bank transfer', href: 'https://yellowcard.io' },
-  { name: 'Fonbnk', description: 'Convert airtime or mobile money to USDC', href: 'https://fonbnk.com' },
-  { name: 'Bybit P2P', description: 'Buy USDC from verified Nigerian merchants', href: 'https://bybit.com' },
-  { name: 'Luno', description: 'Buy crypto with Naira and bridge to Polygon', href: 'https://luno.com' },
+  { name: 'Fonbnk', description: 'Fund with airtime or mobile money', href: 'https://fonbnk.com' },
+  { name: 'Bybit P2P', description: 'Fund with Naira via bank transfer', href: 'https://bybit.com' },
+  { name: 'Luno', description: 'Fund with Naira via bank deposit', href: 'https://luno.com' },
 ];
 
 // The Polymarket bridge maps the deposit wallet to a deposit address; USDC.e sent there
@@ -111,7 +110,10 @@ export default function FundPage() {
 
       <div className="flex flex-col gap-2">
         <p className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: 'var(--gray-400)', letterSpacing: '0.1em' }}>
-          Buy USDC in Nigeria
+          Fund with Naira
+        </p>
+        <p className="-mt-1 mb-1 text-xs" style={{ color: 'var(--gray-500)' }}>
+          Buy through a trusted partner and your wallet gets credited automatically.
         </p>
         {ON_RAMPS.map((ramp) => (
           <a
