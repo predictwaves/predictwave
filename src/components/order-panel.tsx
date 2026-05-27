@@ -7,6 +7,7 @@ import { useTradingSession } from '@/hooks/use-trading-session';
 import { useCurrencyStore } from '@/lib/currency-store';
 import { formatNgn, formatUsdc, ngnToUsdc, usdcToNgn } from '@/lib/ngn';
 import type { MarketMeta } from '@/lib/polymarket';
+import { roundToTick } from '@/lib/tick';
 
 type OutcomeTab = 'YES' | 'NO';
 const QUICK_NGN = [5_000, 20_000, 100_000];
@@ -27,7 +28,9 @@ export function OrderPanel({ market, fxRate }: OrderPanelProps) {
   const [amount, setAmount] = useState('');
 
   const outcome = tab === 'YES' ? market.outcomes[0] : market.outcomes[1];
-  const priceUsdc = outcome?.price ?? 0;
+  // Round to the market tick so the preview + button reflect the price actually
+  // submitted (the server re-rounds authoritatively before posting to the CLOB).
+  const priceUsdc = roundToTick(outcome?.price ?? 0, market.tickSize);
   const tokenId = outcome?.tokenId ?? '';
 
   const amountNum = Number.parseFloat(amount) || 0;

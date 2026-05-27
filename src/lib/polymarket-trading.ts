@@ -1,10 +1,12 @@
 import 'server-only';
 import { PrivyClient } from '@privy-io/node';
 import { createSecureClient, OrderSide } from '@polymarket/client';
+import { fetchTickSize } from '@polymarket/client/actions';
 import { builderApiKey } from '@polymarket/client/node';
 import { signerFrom } from '@polymarket/client/privy';
 import { clientEnv, serverEnv } from './env';
 import type { ClobCreds } from './polymarket-user-creds';
+import { roundToTick } from './tick';
 
 // Server-side Polymarket trading via the unified SDK with Privy *session signer*
 // signing. The user's embedded EOA signs on the server (no key in the browser) under
@@ -123,11 +125,16 @@ export async function placeOrder(
     >,
   });
 
+  // The CLOB rejects prices that aren't exact multiples of the market's tick size, so
+  // fetch the authoritative tick and round before submitting.
+  const tickSize = Number(await fetchTickSize(client, { tokenId: input.tokenId }));
+  const price = roundToTick(input.price, tickSize);
+
   const builderCode = serverEnv.POLYMARKET_BUILDER_CODE;
   const response = await client.placeLimitOrder({
     tokenId: input.tokenId,
     side: input.side === 'BUY' ? OrderSide.BUY : OrderSide.SELL,
-    price: input.price,
+    price,
     size: input.size,
     ...(builderCode ? { builderCode: builderCode as `0x${string}` } : {}),
   });

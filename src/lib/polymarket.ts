@@ -23,6 +23,7 @@ export interface MarketMeta {
   volumeTotal: number;
   liquidity: number;
   outcomes: { name: string; tokenId: string; price: number }[];
+  tickSize: number;
   active: boolean;
   closed: boolean;
 }
@@ -126,6 +127,7 @@ function normalize(raw: Record<string, unknown>): MarketMeta {
     volumeTotal: Number(raw.volume_num ?? 0),
     liquidity: Number(raw.liquidity_num ?? 0),
     outcomes,
+    tickSize: Number(raw.minimum_tick_size ?? 0.01),
     active: Boolean(raw.active),
     closed: Boolean(raw.closed),
   };

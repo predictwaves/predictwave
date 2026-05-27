@@ -47,6 +47,7 @@ const market: MarketMeta = {
     { name: 'Yes', tokenId: 'yes-token', price: 0.6 },
     { name: 'No', tokenId: 'no-token', price: 0.4 },
   ],
+  tickSize: 0.01,
   active: true,
   closed: false,
 };
